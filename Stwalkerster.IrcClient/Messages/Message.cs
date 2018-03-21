@@ -3,8 +3,6 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using Stwalkerster.Extensions;
-    using Stwalkerster.IrcClient.Extensions;
 
     /// <summary>
     /// The message.
@@ -47,7 +45,7 @@
         /// The parameters.
         /// </param>
         public Message(string command, string parameter)
-            : this(null, command, parameter.ToEnumerable())
+            : this(null, command, new List<string> {parameter})
         {
         }
 

@@ -4,13 +4,12 @@
     using System.Collections.Generic;
     using System.Linq;
     using System.Security;
+    using System.Text;
     using System.Threading;
 
     using Castle.Core.Logging;
-    using Stwalkerster.Extensions;
     using Stwalkerster.IrcClient.Events;
     using Stwalkerster.IrcClient.Exceptions;
-    using Stwalkerster.IrcClient.Extensions;
     using Stwalkerster.IrcClient.Interfaces;
     using Stwalkerster.IrcClient.Messages;
     using Stwalkerster.IrcClient.Model;
@@ -877,7 +876,7 @@
 
             if (e.Message.Command == Numerics.WhoXReply)
             {
-                this.logger.DebugFormat("WHOX Reply:{0}", e.Message.Parameters.Implode());
+                this.logger.DebugFormat("WHOX Reply:{0}", string.Join(" ", e.Message.Parameters));
                 this.HandleWhoXReply(e.Message);
             }
 
@@ -1365,8 +1364,8 @@
                 if (list[1] == "LS")
                 {
                     var serverCapabilities = list[2].Split(' ');
-                    this.logger.DebugFormat("Server Capabilities: {0}", serverCapabilities.Implode(", "));
-                    this.logger.DebugFormat("Client Capabilities: {0}", this.clientCapabilities.Implode(", "));
+                    this.logger.DebugFormat("Server Capabilities: {0}", string.Join(", ", serverCapabilities));
+                    this.logger.DebugFormat("Client Capabilities: {0}", string.Join(", ", this.clientCapabilities));
 
                     var caps = serverCapabilities.Intersect(this.clientCapabilities).ToList();
 
@@ -1390,9 +1389,9 @@
                         return;
                     }
 
-                    this.logger.InfoFormat("Requesting capabilities: {0}", caps.Implode(", "));
-
-                    this.Send(new Message("CAP", new[] {"REQ", caps.Implode()}));
+                    this.logger.InfoFormat("Requesting capabilities: {0}", string.Join(", ", caps));
+                    
+                    this.Send(new Message("CAP", new[] {"REQ", string.Join(" ", caps)}));
 
                     return;
                 }
@@ -1400,7 +1399,7 @@
                 if (list[1] == "ACK")
                 {
                     var caps = list[2].Split(' ');
-                    this.logger.InfoFormat("Acknowledged capabilities: {0}", caps.Implode(", "));
+                    this.logger.InfoFormat("Acknowledged capabilities: {0}", string.Join(", ", caps));
 
                     foreach (var cap in caps)
                     {
@@ -1436,7 +1435,7 @@
                 {
                     // something went wrong, so downgrade to 1459.
                     var caps = list[2].Split(' ');
-                    this.logger.WarnFormat("NOT Acked capabilities: {0}", caps.Implode(", "));
+                    this.logger.WarnFormat("NOT Acked capabilities: {0}", string.Join(", ", caps));
 
                     this.Send(new Message("CAP", "END"));
                     this.Send1459Registration();
@@ -1501,7 +1500,8 @@
             var list = message.Parameters.ToList();
             if (list[0] == "+")
             {
-                var authdata = string.Format("\0{0}\0{1}", this.username, this.password).ToBase64();
+                var authdata = string.Format("\0{0}\0{1}", this.username, this.password);
+                authdata = Convert.ToBase64String(Encoding.UTF8.GetBytes(authdata));
                 this.Send(new Message("AUTHENTICATE", authdata));
             }
         }

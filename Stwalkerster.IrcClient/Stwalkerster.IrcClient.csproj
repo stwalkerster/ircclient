@@ -76,10 +76,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Stwalkerster.Extensions\Stwalkerster.Extensions.csproj">
-      <Project>{452248af-32ab-4a57-85fa-fb6173f6ce41}</Project>
-      <Name>Stwalkerster.Extensions</Name>
-    </ProjectReference>
+    <Content Include="Stwalkerster.IrcClient.nuspec" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
