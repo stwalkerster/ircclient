@@ -234,7 +234,7 @@
         /// </summary>
         public event EventHandler<MessageReceivedEventArgs> ReceivedMessage;
 
-        public event EventHandler<KickedEventArgs> BotKickedEvent;
+        public event EventHandler<KickedEventArgs> WasKickedEvent;
 
         public event EventHandler<ModeEventArgs> ModeReceivedEvent;
 
@@ -621,7 +621,7 @@
         
         protected virtual void OnBotKickedEvent(KickedEventArgs e)
         {
-            var handler = this.BotKickedEvent;
+            var handler = this.WasKickedEvent;
             if (handler != null)
             {
                 handler(this, e);

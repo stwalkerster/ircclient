@@ -27,6 +27,21 @@
         /// The received message.
         /// </summary>
         event EventHandler<MessageReceivedEventArgs> ReceivedMessage;
+
+        /// <summary>
+        /// Raised when a part is detected - either someone else or this client.
+        /// </summary>
+        event EventHandler<JoinEventArgs> PartReceivedEvent;
+        
+        /// <summary>
+        /// Raised when a mode change is detected
+        /// </summary>
+        event EventHandler<ModeEventArgs> ModeReceivedEvent;
+        
+        /// <summary>
+        /// Raised when this client was kicked from a channel
+        /// </summary>
+        event EventHandler<KickedEventArgs> WasKickedEvent;
         
         /// <summary>
         /// Raised when the client disconnects from IRC.
