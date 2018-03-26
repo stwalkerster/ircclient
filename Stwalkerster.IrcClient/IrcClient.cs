@@ -806,12 +806,12 @@
                         this.nickTrackingValid = false;
                     }
                 }
+            }
 
-                var temp = this.JoinReceivedEvent;
-                if (temp != null)
-                {
-                    temp(this, new JoinEventArgs(e.Message, user, channelName, this));
-                }
+            var temp = this.JoinReceivedEvent;
+            if (temp != null)
+            {
+                temp(this, new JoinEventArgs(e.Message, user, channelName, this));
             }
         }
 
