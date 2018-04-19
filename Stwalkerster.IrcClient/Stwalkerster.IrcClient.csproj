@@ -36,6 +36,9 @@
     <Reference Include="Castle.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc">
       <HintPath>..\packages\Castle.Core.4.2.1\lib\net45\Castle.Core.dll</HintPath>
     </Reference>
+    <Reference Include="Castle.Windsor, Version=4.0.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc">
+      <HintPath>..\packages\Castle.Windsor.4.1.0\lib\net45\Castle.Windsor.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
   </ItemGroup>
@@ -49,6 +52,7 @@
     <Compile Include="Events\UserEventArgsBase.cs" />
     <Compile Include="Exceptions\OperationNotSupportedException.cs" />
     <Compile Include="Extensions\CtcpExtensions.cs" />
+    <Compile Include="Installer.cs" />
     <Compile Include="Interfaces\IIrcClient.cs" />
     <Compile Include="Interfaces\IIrcConfiguration.cs" />
     <Compile Include="Interfaces\INetworkClient.cs" />
