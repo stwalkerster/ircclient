@@ -12,22 +12,22 @@
         bool Connected { get; }
 
         /// <summary>
-        /// The data received.
+        /// Raised when an event is received from the network stream
         /// </summary>
         event EventHandler<DataReceivedEventArgs> DataReceived;
 
         /// <summary>
-        /// Gets the hostname.
+        /// Gets the hostname to connect to
         /// </summary>
         string Hostname { get; }
 
         /// <summary>
-        /// Gets the port.
+        /// Gets the port to connect to.
         /// </summary>
         int Port { get; }
 
         /// <summary>
-        /// The send.
+        /// Enqueues a line of text to be sent to the network socket
         /// </summary>
         /// <param name="message">
         /// The message.
@@ -35,7 +35,15 @@
         void Send(string message);
 
         /// <summary>
-        /// The send.
+        /// Enqueues a priority line of text to be sent to the network socket
+        /// </summary>
+        /// <param name="message">
+        /// The message.
+        /// </param>
+        void PrioritySend(string message);
+
+        /// <summary>
+        /// Enqueues a collection of lines of text to be sent to the network socket
         /// </summary>
         /// <param name="messages">
         /// The messages.
@@ -43,8 +51,15 @@
         void Send(IEnumerable<string> messages);
 
         /// <summary>
-        /// The disconnect.
+        /// Disconnects the network socket
         /// </summary>
         void Disconnect();
+        
+        /// <summary>
+        /// Opens the network socket and initialises the events
+        /// </summary>
+        void Connect();
+
+        event EventHandler<EventArgs> Disconnected;
     }
 }

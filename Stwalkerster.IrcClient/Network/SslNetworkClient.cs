@@ -11,8 +11,6 @@
     /// </summary>
     public class SslNetworkClient : NetworkClient
     {
-        #region Constructors and Destructors
-
         /// <summary>
         /// Initialises a new instance of the <see cref="SslNetworkClient" /> class.
         /// </summary>
@@ -26,20 +24,25 @@
         /// The logger.
         /// </param>
         public SslNetworkClient(string hostname, int port, ILogger logger)
-            : base(hostname, port, logger, false)
+            : base(hostname, port, logger)
         {
+        }
+
+        /// <inheritdoc />
+        public override void Connect()
+        {
+            this.Connect(false);
+            
             var sslStream = new SslStream(this.Client.GetStream());
 
-            logger.Info("Performing SSL Handshake...");
+            this.Logger.Info("Performing SSL Handshake...");
 
-            sslStream.AuthenticateAsClient(hostname, new X509CertificateCollection(), SslProtocols.Tls, false);
+            sslStream.AuthenticateAsClient(this.Hostname, new X509CertificateCollection(), SslProtocols.Tls, false);
 
             this.Reader = new StreamReader(sslStream);
             this.Writer = new StreamWriter(sslStream);
-
+            
             this.StartThreads();
         }
-
-        #endregion
     }
 }

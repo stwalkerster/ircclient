@@ -17,55 +17,24 @@
     /// </para>
     public class NetworkClient : INetworkClient
     {
-        #region Public Events
-
-        /// <summary>
-        ///     The data received.
-        /// </summary>
+        /// <inheritdoc />
         public event EventHandler<DataReceivedEventArgs> DataReceived;
+        public event EventHandler<EventArgs> Disconnected;
 
-        #endregion
-
-        #region Fields
-
-        /// <summary>
-        ///     The client.
-        /// </summary>
         private readonly TcpClient client;
 
-        /// <summary>
-        ///     The network logger.
-        /// </summary>
         private readonly ILogger inboundLogger;
-
-        /// <summary>
-        ///     The logger.
-        /// </summary>
-        private readonly ILogger logger;
-
-        /// <summary>
-        ///     The outbound logger.
-        /// </summary>
         private readonly ILogger outboundLogger;
 
-        /// <summary>
-        ///     The send queue.
-        /// </summary>
-        private readonly Queue<string> sendQueue;
-
-        /// <summary>
-        ///     The send queue lock.
-        /// </summary>
+        private readonly LinkedList<string> sendQueue;
         private readonly object sendQueueLock = new object();
 
-        /// <summary>
-        ///     The reset event.
-        /// </summary>
         private readonly AutoResetEvent writerThreadResetEvent;
+        private readonly Thread readerThread;
+        private readonly Thread writerThread;
 
-        #endregion
-
-        #region Constructors and Destructors
+        private bool disconnectedFired;
+        private readonly object disconnectedLock = new object();
 
         /// <summary>
         ///     Initialises a new instance of the <see cref="NetworkClient" /> class.
@@ -80,42 +49,83 @@
         ///     The logger.
         /// </param>
         public NetworkClient(string hostname, int port, ILogger logger)
-            : this(hostname, port, logger, true)
-        {
-        }
-
-        /// <summary>
-        ///     Initialises a new instance of the <see cref="NetworkClient" /> class.
-        /// </summary>
-        /// <param name="hostname">
-        ///     The hostname.
-        /// </param>
-        /// <param name="port">
-        ///     The port.
-        /// </param>
-        /// <param name="logger">
-        ///     The logger.
-        /// </param>
-        /// <param name="startThreads">
-        ///     The start threads.
-        /// </param>
-        protected NetworkClient(string hostname, int port, ILogger logger, bool startThreads)
         {
             this.Hostname = hostname;
             this.Port = port;
-            this.logger = logger;
+            this.Logger = logger;
             this.inboundLogger = logger.CreateChildLogger("Inbound");
             this.outboundLogger = logger.CreateChildLogger("Outbound");
 
-            this.logger.InfoFormat("Connecting to socket tcp://{0}:{1}/ ...", hostname, port);
+            this.sendQueue = new LinkedList<string>();
+            this.client = new TcpClient();
+            
+            this.readerThread = new Thread(this.ReaderThreadTask);
+            this.writerThread = new Thread(this.WriterThreadTask);
 
-            this.client = new TcpClient(this.Hostname, this.Port);
+            this.writerThreadResetEvent = new AutoResetEvent(true);
+        }
+
+        protected TcpClient Client
+        {
+            get { return this.client; }
+        }
+
+        /// <inheritdoc />
+        public bool Connected
+        {
+            get { return this.client.Connected; }
+        }
+        
+        /// <inheritdoc />
+        public string Hostname { get; private set; }
+
+        /// <inheritdoc />
+        public int Port { get; private set; }
+
+        protected StreamReader Reader { get; set; }
+        protected StreamWriter Writer { get; set; }
+
+        protected ILogger Logger { get; private set; }
+
+        /// <inheritdoc />
+        public void Disconnect()
+        {
+            this.Logger.Info("Disconnecting network socket.");
+            
+            try
+            {
+                this.Writer.Flush();
+                this.Writer.Close();
+            }
+            catch (IOException ex)
+            {
+                this.Logger.Info("Error disposing writer and stream.", ex);
+            }
+
+            try
+            {
+                this.client.Close();
+            }
+            catch (IOException ex)
+            {
+                this.Logger.Info("Error closing socket.", ex);
+            }
+        }
+
+        /// <inheritdoc />
+        public virtual void Connect()
+        {
+            this.Connect(true);
+        }
+
+        protected void Connect(bool startThreads)
+        {
+            this.Logger.InfoFormat("Connecting to socket tcp://{0}:{1}/ ...", this.Hostname, this.Port);
+
+            this.client.Connect(this.Hostname, this.Port);
 
             this.Reader = new StreamReader(this.client.GetStream());
             this.Writer = new StreamWriter(this.client.GetStream());
-            this.sendQueue = new Queue<string>();
-
-            this.writerThreadResetEvent = new AutoResetEvent(true);
 
             if (startThreads)
             {
@@ -123,116 +133,49 @@
             }
         }
 
-        #endregion
-
-        #region Public Properties
-
-        /// <summary>
-        ///     Gets the client.
-        /// </summary>
-        public TcpClient Client
-        {
-            get { return this.client; }
-        }
-
-        public bool Connected
-        {
-            get { return this.client.Connected; }
-        }
-
-        /// <summary>
-        ///     The hostname.
-        /// </summary>
-        public string Hostname { get; private set; }
-
-        /// <summary>
-        ///     The port.
-        /// </summary>
-        public int Port { get; private set; }
-
-        #endregion
-
-        #region Properties
-
-        /// <summary>
-        ///     Gets or sets the reader.
-        /// </summary>
-        protected StreamReader Reader { get; set; }
-
-        /// <summary>
-        ///     Gets or sets the writer.
-        /// </summary>
-        protected StreamWriter Writer { get; set; }
-
-        #endregion
-
-        #region Public Methods and Operators
-
-        /// <summary>
-        ///     The disconnect.
-        /// </summary>
-        public void Disconnect()
-        {
-            this.logger.Info("Disconnecting network socket.");
-            this.Writer.Flush();
-            this.Writer.Close();
-            this.client.Close();
-        }
-
-        /// <summary>
-        ///     The dispose.
-        /// </summary>
+        /// <inheritdoc />
         public void Dispose()
         {
             this.Dispose(true);
             GC.SuppressFinalize(this);
         }
 
-        /// <summary>
-        ///     The send.
-        /// </summary>
-        /// <param name="message">
-        ///     The message.
-        /// </param>
+        /// <inheritdoc />
         public void Send(string message)
         {
             lock (this.sendQueueLock)
             {
-                this.sendQueue.Enqueue(message);
+                this.sendQueue.AddLast(message);
             }
 
             this.writerThreadResetEvent.Set();
         }
 
-        /// <summary>
-        ///     The send.
-        /// </summary>
-        /// <param name="messages">
-        ///     The messages.
-        /// </param>
+        /// <inheritdoc />
+        public void PrioritySend(string message)
+        {
+            lock (this.sendQueueLock)
+            {
+                this.sendQueue.AddFirst(message);
+            }
+
+            this.writerThreadResetEvent.Set();
+        }
+
+        /// <inheritdoc />
         public void Send(IEnumerable<string> messages)
         {
             lock (this.sendQueueLock)
             {
                 foreach (var message in messages)
                 {
-                    this.sendQueue.Enqueue(message);
+                    this.sendQueue.AddLast(message);
                 }
             }
 
             this.writerThreadResetEvent.Set();
         }
 
-        #endregion
-
-        #region Methods
-
-        /// <summary>
-        ///     The dispose.
-        /// </summary>
-        /// <param name="disposing">
-        ///     The disposing.
-        /// </param>
         protected virtual void Dispose(bool disposing)
         {
             if (disposing)
@@ -240,16 +183,9 @@
                 this.Reader.Dispose();
                 this.Writer.Dispose();
                 ((IDisposable) this.writerThreadResetEvent).Dispose();
-                this.client.Close();
             }
         }
 
-        /// <summary>
-        ///     The on data received.
-        /// </summary>
-        /// <param name="e">
-        ///     The e.
-        /// </param>
         protected virtual void OnDataReceived(DataReceivedEventArgs e)
         {
             var handler = this.DataReceived;
@@ -259,28 +195,19 @@
             }
         }
 
-        /// <summary>
-        ///     The start threads.
-        /// </summary>
         protected void StartThreads()
         {
-            var readerThread = new Thread(this.ReaderThreadTask);
-            var writerThread = new Thread(this.WriterThreadTask);
+            this.Logger.InfoFormat("Initialising reader/writer threads");
 
-            this.logger.InfoFormat("Initialising reader/writer threads");
-
-            readerThread.Start();
-            writerThread.Start();
+            this.readerThread.Start();
+            this.writerThread.Start();
         }
 
-        /// <summary>
-        ///     The reader thread task.
-        /// </summary>
         private void ReaderThreadTask()
         {
-            while (this.client.Connected)
+            try
             {
-                try
+                while (this.client.Connected)
                 {
                     var data = this.Reader.ReadLine();
 
@@ -290,53 +217,109 @@
                         this.OnDataReceived(new DataReceivedEventArgs(data));
                     }
                 }
-                catch (IOException ex)
-                {
-                    this.logger.Error("IO error on read from network stream", ex);
-                }
+            }
+            catch (IOException ex)
+            {
+                this.Logger.Error("IO error on read from network stream", ex);
+            }
+            catch (SocketException ex)
+            {
+                this.Logger.Error("Socket error on read from network stream", ex);
+            }
+            catch (ObjectDisposedException ex)
+            {
+                this.Logger.Fatal("Object disposed", ex);
+            }
+            finally
+            {
+                this.writerThread.Abort();
+                this.client.Close();
+
+                this.FireDisconnectedEvent();
             }
         }
 
-        /// <summary>
-        ///     The writer thread task.
-        /// </summary>
         private void WriterThreadTask()
         {
-            while (this.client.Connected)
+            try
             {
-                string item = null;
+                while (this.client.Connected)
+                {
+                    string item = null;
 
-                // grab an item from the queue if we can
-                lock (this.sendQueueLock)
-                {
-                    if (this.sendQueue.Count > 0)
+                    // grab an item from the queue if we can
+                    lock (this.sendQueueLock)
                     {
-                        item = this.sendQueue.Dequeue();
-                    }
-                }
-
-                if (item == null)
-                {
-                    // Wait here for an item to be added to the queue
-                    this.writerThreadResetEvent.WaitOne();
-                }
-                else
-                {
-                    if (string.IsNullOrEmpty(item))
-                    {
-                        continue;
+                        if (this.sendQueue.Count > 0)
+                        {
+                            item = this.sendQueue.First.Value;
+                            this.sendQueue.RemoveFirst();
+                        }
                     }
 
-                    this.outboundLogger.Debug(item);
-                    this.Writer.WriteLine(item);
-                    this.Writer.Flush();
+                    if (item == null)
+                    {
+                        // Wait here for an item to be added to the queue
+                        this.writerThreadResetEvent.WaitOne(500);
+                    }
+                    else
+                    {
+                        if (string.IsNullOrEmpty(item))
+                        {
+                            continue;
+                        }
 
-                    // Flood protection
-                    Thread.Sleep(500);
+                        this.outboundLogger.Debug(item);
+                        this.Writer.WriteLine(item);
+                        this.Writer.Flush();
+
+                        // Flood protection
+                        Thread.Sleep(500);
+                    }
                 }
+            }
+            catch (IOException ex)
+            {
+                this.Logger.Error("IO error on read from network stream", ex);
+            }
+            catch (SocketException ex)
+            {
+                this.Logger.Error("Socket error on read from network stream", ex);
+            }
+            catch (ObjectDisposedException ex)
+            {
+                this.Logger.Fatal("Object disposed", ex);
+            }
+            finally
+            {            
+                this.readerThread.Abort();
+                this.client.Close();
+
+                this.FireDisconnectedEvent();
             }
         }
 
-        #endregion
+        private void FireDisconnectedEvent()
+        {
+            var fireDisconnected = false;
+            
+            lock (this.disconnectedLock)
+            {
+                if (!this.disconnectedFired)
+                {
+                    this.disconnectedFired = true;
+                    fireDisconnected = true;
+                }
+            }
+
+            if (fireDisconnected)
+            {
+                var tmp = this.Disconnected;
+                if (tmp != null)
+                {
+                    tmp(this, EventArgs.Empty);
+                }
+            }
+        }
     }
 }

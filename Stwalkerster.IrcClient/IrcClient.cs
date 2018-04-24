@@ -143,6 +143,12 @@
         /// </summary>
         private bool servicesLoggedIn;
 
+        private bool pingThreadAlive;
+        private string expectedPingMessage;
+        private readonly AutoResetEvent pingReplyEvent;
+        private Thread pingThread;
+        private int lagTimer = 0;
+
         #endregion
 
         #region Constructors and Destructors
@@ -151,6 +157,8 @@
         {
             this.networkClient = client;
             this.networkClient.DataReceived += this.NetworkClientOnDataReceived;
+            this.networkClient.Disconnected += this.NetworkClientDisconnected;
+            this.networkClient.Connect();
 
             if (!this.authToServices)
             {
@@ -188,6 +196,9 @@
             
             this.userCache = new Dictionary<string, IrcUser>();
             this.channels = new Dictionary<string, IrcChannel>();
+            
+            this.pingReplyEvent = new AutoResetEvent(false);
+            this.pingThread = new Thread(this.PingThreadWorker);
 
             this.connectionRegistrationSemaphore = new Semaphore(0, 1);
             this.syncLogger.Debug("ctor() acquired connectionRegistration semaphore.");
@@ -577,6 +588,11 @@
             }
         }
 
+        private void NetworkClientDisconnected(object sender, EventArgs e)
+        {
+            this.Disconnect("Network client connection lost.");
+        }
+        
         /// <summary>
         /// The network client on data received.
         /// </summary>
@@ -593,20 +609,20 @@
             if (message.Command == "ERROR")
             {
                 var errorMessage = message.Parameters.First();
-                this.logger.Fatal(errorMessage);
-                this.networkClient.Disconnect();
-
-                // Invoke the disconnected event
-                var temp = this.DisconnectedEvent;
-                if (temp != null)
-                {
-                    temp(this, new EventArgs());
-                }
+                this.Disconnect(errorMessage);
             }
 
             if (message.Command == "PING")
             {
                 this.Send(new Message("PONG", message.Parameters));
+            }
+
+            if (message.Command == "PONG")
+            {
+                if (message.Parameters.Contains(this.expectedPingMessage))
+                {
+                    this.pingReplyEvent.Set();
+                }
             }
 
             if (this.connectionRegistered)
@@ -618,7 +634,23 @@
                 this.RegisterConnection(message);
             }
         }
-        
+
+        private void Disconnect(string errorMessage)
+        {
+            this.pingThreadAlive = false;
+            this.pingThread.Abort();
+            
+            this.logger.Fatal(errorMessage);
+            this.networkClient.Disconnect();
+
+            // Invoke the disconnected event
+            var temp = this.DisconnectedEvent;
+            if (temp != null)
+            {
+                temp(this, new EventArgs());
+            }
+        }
+
         protected virtual void OnBotKickedEvent(KickedEventArgs e)
         {
             var handler = this.WasKickedEvent;
@@ -1329,12 +1361,14 @@
             {
                 this.logger.Info("Connection registration succeeded");
                 this.serverPrefix = message.Prefix;
-                this.connectionRegistered = true;
-                this.connectionRegistrationSemaphore.Release();
-
+                
+                this.pingThread.Start();
+                
                 // block forwarding
                 this.Send(new Message("MODE", new[] {this.Nickname, "+Q"}));
-
+                
+                this.connectionRegistered = true;
+                this.connectionRegistrationSemaphore.Release();
                 this.syncLogger.Debug("RegisterConnection() released connectionRegistration semaphore.");
 
                 this.RaiseDataEvent(message);
@@ -1481,6 +1515,41 @@
             }
 
             this.logger.ErrorFormat("How did I get here? ({0} recieved)", message.Command);
+        }
+
+        private void PingThreadWorker()
+        {
+            this.pingThreadAlive = true;
+            var timeout = TimeSpan.FromSeconds(15);
+            var timerWait = new AutoResetEvent(false);
+
+            while (this.pingThreadAlive)
+            {
+                timerWait.WaitOne(timeout);
+
+                var totalSeconds = (int)DateTime.UtcNow.Subtract(new DateTime(1970,1,1,0,0,0,0)).TotalSeconds;
+                this.expectedPingMessage = string.Format("GNU Terry Pratchett {0}", totalSeconds);
+
+                this.networkClient.PrioritySend(string.Format("PING :{0}", this.expectedPingMessage));
+                var result = this.pingReplyEvent.WaitOne(timeout);
+
+                if (!result)
+                {
+                    this.logger.Warn("Ping reply not received!");
+                    this.lagTimer++;
+
+                    if (this.lagTimer >= 3)
+                    {
+                        this.networkClient.PrioritySend("QUIT :Unexpected heavy lag, restarting...");
+                        this.Disconnect("Heavy lag, three ping replies not recieved.");
+                    }
+                }
+                else
+                {
+                    this.lagTimer = 0;
+                    
+                }
+            }
         }
 
         /// <summary>
