@@ -969,7 +969,7 @@
             var statusMessage = e.Message.Parameters.FirstOrDefault(x => x.StartsWith("STATUSMSG="));
             if (statusMessage != null)
             {
-                this.supportHelper.HandleStatusMessageSupport(prefixMessage, this.destinationFlags);
+                this.supportHelper.HandleStatusMessageSupport(statusMessage, this.destinationFlags);
             }
 
             // TODO: finish me
