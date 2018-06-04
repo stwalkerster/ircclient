@@ -24,7 +24,12 @@
         event EventHandler<JoinEventArgs> JoinReceivedEvent;
 
         /// <summary>
-        /// The received message.
+        /// Fired whenevner a raw IRC message is received 
+        /// </summary>
+        event EventHandler<IrcMessageReceivedEventArgs> ReceivedIrcMessage;
+        
+        /// <summary>
+        /// Fired on PRIVMSG/NOTICE
         /// </summary>
         event EventHandler<MessageReceivedEventArgs> ReceivedMessage;
 
@@ -165,5 +170,6 @@
         void Mode(string target, string changes);
 
         #endregion
+
     }
 }

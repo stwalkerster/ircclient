@@ -14,7 +14,9 @@
             string realName,
             bool ssl,
             string clientName,
-            string password = null)
+            string password = null,
+            bool restartOnHeavyLag = true
+            )
         {
             if (hostname == null)
             {
@@ -60,6 +62,7 @@
             this.Password = password;
             this.Ssl = ssl;
             this.ClientName = clientName;
+            this.RestartOnHeavyLag = restartOnHeavyLag;
         }
 
         public bool AuthToServices { get; private set; }
@@ -71,5 +74,6 @@
         public string Password { get; private set; }
         public bool Ssl { get; private set; }
         public string ClientName { get; private set; }
+        public bool RestartOnHeavyLag { get; private set; }
     }
 }

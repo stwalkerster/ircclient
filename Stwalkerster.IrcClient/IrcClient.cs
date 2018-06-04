@@ -26,10 +26,10 @@
         /// </summary>
         private readonly Dictionary<string, Action<IrcChannelUser, bool>> modeMapping =
             new Dictionary<string, Action<IrcChannelUser, bool>>
-                {
-                    { "v", (x, flag) => x.Voice = flag },
-                    { "o", (x, flag) => x.Operator = flag },
-                };
+            {
+                { "v", (x, flag) => x.Voice = flag },
+                { "o", (x, flag) => x.Operator = flag },
+            };
 
         #region Fields
 
@@ -148,6 +148,7 @@
         private readonly AutoResetEvent pingReplyEvent;
         private Thread pingThread;
         private int lagTimer = 0;
+        private bool restartOnHeavyLag;
 
         #endregion
 
@@ -165,15 +166,13 @@
                 this.logger.Warn("Services authentication is disabled!");
 
                 this.clientCapabilities.Remove("sasl");
-                this.clientCapabilities.Remove("account-notify");
-                this.clientCapabilities.Remove("extended-join");
             }
 
             this.RegisterConnection(null);
         }
 
         public IrcClient(ILogger logger, IIrcConfiguration configuration, ISupportHelper supportHelper)
-        : this(null, logger, configuration, supportHelper)
+            : this(null, logger, configuration, supportHelper)
         {
         }
 
@@ -184,13 +183,14 @@
             this.realName = configuration.RealName;
             this.password = configuration.Password;
             this.authToServices = configuration.AuthToServices;
+            this.restartOnHeavyLag = configuration.RestartOnHeavyLag;
 
             this.supportHelper = supportHelper;
             this.ClientName = configuration.ClientName;
             this.logger = logger.CreateChildLogger(this.ClientName);
 
             this.syncLogger = this.logger.CreateChildLogger("Sync");
-            this.ReceivedMessage += this.OnMessageReceivedEvent;
+            this.ReceivedIrcMessage += this.OnIrcMessageReceivedIrcEvent;
 
             this.clientCapabilities = new List<string> {"sasl", "account-notify", "extended-join", "multi-prefix"};
             
@@ -243,11 +243,13 @@
         /// <summary>
         /// The received message.
         /// </summary>
+        public event EventHandler<IrcMessageReceivedEventArgs> ReceivedIrcMessage;
+
         public event EventHandler<MessageReceivedEventArgs> ReceivedMessage;
 
         public event EventHandler<KickedEventArgs> WasKickedEvent;
 
-        public event EventHandler<ModeEventArgs> ModeReceivedEvent;
+        public event EventHandler<ModeEventArgs> ModeReceivedEvent;    
 
         /// <summary>
         /// Raised when the client disconnects from IRC.
@@ -669,7 +671,7 @@
         /// <param name="user">
         /// The user.
         /// </param>
-        private void OnAccountMessageReceived(MessageReceivedEventArgs e, IUser user)
+        private void OnAccountMessageReceived(IrcMessageReceivedEventArgs e, IUser user)
         {
             var parameters = e.Message.Parameters.ToList();
 
@@ -756,7 +758,7 @@
         /// <param name="user">
         /// The user.
         /// </param>
-        private void OnJoinReceived(MessageReceivedEventArgs e, IUser user)
+        private void OnJoinReceived(IrcMessageReceivedEventArgs e, IUser user)
         {
             // this is a client join to a channel.
             // :stwalkerster!stwalkerst@wikimedia/stwalkerster JOIN ##stwalkerster
@@ -856,7 +858,7 @@
         /// <param name="e">
         /// The e.
         /// </param>
-        private void OnMessageReceivedEvent(object sender, MessageReceivedEventArgs e)
+        private void OnIrcMessageReceivedIrcEvent(object sender, IrcMessageReceivedEventArgs e)
         {
             IUser user = null;
             if (e.Message.Prefix != null)
@@ -891,6 +893,23 @@
                 }
             }
 
+            if (e.Message.Command == "PRIVMSG" || e.Message.Command == "NOTICE")
+            {
+                var messageReceivedEvent = this.ReceivedMessage;
+                if (messageReceivedEvent != null)
+                {
+                    var newEvent = new MessageReceivedEventArgs(
+                        user,
+                        e.Message.Parameters.First(),
+                        e.Message.Parameters.Skip(1).First(),
+                        e.Message.Command == "NOTICE",
+                        e.Client
+                    );
+                
+                    messageReceivedEvent(this, newEvent);
+                }
+            }
+            
             if ((e.Message.Command == "JOIN") && (user != null))
             {
                 this.OnJoinReceived(e, user);
@@ -988,7 +1007,7 @@
             }
         }
 
-        private void OnISupportMessageRecieved(MessageReceivedEventArgs e)
+        private void OnISupportMessageRecieved(IrcMessageReceivedEventArgs e)
         {
             // User modes in channels
             var prefixMessage = e.Message.Parameters.FirstOrDefault(x => x.StartsWith("PREFIX="));
@@ -1024,7 +1043,7 @@
         /// <param name="e">
         /// The e.
         /// </param>
-        private void OnNameReplyReceived(MessageReceivedEventArgs e)
+        private void OnNameReplyReceived(IrcMessageReceivedEventArgs e)
         {
             var parameters = e.Message.Parameters.ToList();
 
@@ -1088,7 +1107,7 @@
         /// <param name="user">
         /// The user.
         /// </param>
-        private void OnNickChangeReceived(MessageReceivedEventArgs e, IUser user)
+        private void OnNickChangeReceived(IrcMessageReceivedEventArgs e, IUser user)
         {
             var parameters = e.Message.Parameters.ToList();
             var newNickname = parameters[0];
@@ -1178,7 +1197,7 @@
         /// <param name="user">
         /// The user.
         /// </param>
-        private void OnPartMessageReceived(MessageReceivedEventArgs e, IUser user)
+        private void OnPartMessageReceived(IrcMessageReceivedEventArgs e, IUser user)
         {
             var parameters = e.Message.Parameters.ToList();
             var channel = parameters[0];
@@ -1235,7 +1254,7 @@
         /// <param name="e">
         /// The e.
         /// </param>
-        private void OnKickMessageReceived(MessageReceivedEventArgs e)
+        private void OnKickMessageReceived(IrcMessageReceivedEventArgs e)
         {
             // Kick format is:
             // :n!u@h KICK #chan nick :reason
@@ -1315,10 +1334,10 @@
         /// </param>
         private void RaiseDataEvent(IMessage message)
         {
-            var receivedMessageEvent = this.ReceivedMessage;
+            var receivedMessageEvent = this.ReceivedIrcMessage;
             if (receivedMessageEvent != null)
             {
-                receivedMessageEvent(this, new MessageReceivedEventArgs(message, this));
+                receivedMessageEvent(this, new IrcMessageReceivedEventArgs(message, this));
             }
         }
 
@@ -1361,9 +1380,12 @@
             {
                 this.logger.Info("Connection registration succeeded");
                 this.serverPrefix = message.Prefix;
-                
-                this.pingThread.Start();
-                
+
+                if (this.restartOnHeavyLag)
+                {
+                    this.pingThread.Start();
+                }
+
                 // block forwarding
                 this.Send(new Message("MODE", new[] {this.Nickname, "+Q"}));
                 

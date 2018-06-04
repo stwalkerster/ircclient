@@ -7,7 +7,7 @@
     /// <summary>
     /// The user event args base.
     /// </summary>
-    public class UserEventArgsBase : MessageReceivedEventArgs
+    public class UserEventArgsBase : IrcMessageReceivedEventArgs
     {
         /// <summary>
         /// The user.

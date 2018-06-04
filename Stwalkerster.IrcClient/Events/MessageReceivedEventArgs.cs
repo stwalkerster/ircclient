@@ -2,59 +2,23 @@
 {
     using System;
     using Stwalkerster.IrcClient.Interfaces;
-    using Stwalkerster.IrcClient.Messages;
+    using Stwalkerster.IrcClient.Model.Interfaces;
 
-    /// <summary>
-    /// The message received event args.
-    /// </summary>
     public class MessageReceivedEventArgs : EventArgs
     {
-        #region Fields
-
-        /// <summary>
-        /// The message.
-        /// </summary>
-        private readonly IMessage message;
-
-        #endregion
-
-        #region Constructors and Destructors
-
-        /// <summary>
-        /// Initialises a new instance of the <see cref="MessageReceivedEventArgs"/> class.
-        /// </summary>
-        /// <param name="message">
-        /// The message.
-        /// </param>
-        /// <param name="client">
-        /// The client.
-        /// </param>
-        public MessageReceivedEventArgs(IMessage message, IIrcClient client)
+        public MessageReceivedEventArgs(IUser user, string target, string message, bool isNotice, IIrcClient client)
         {
+            this.User = user;
+            this.Target = target;
+            this.Message = message;
+            this.IsNotice = isNotice;
             this.Client = client;
-            this.message = message;
         }
 
-        #endregion
-
-        #region Public Properties
-
-        /// <summary>
-        /// Gets the client.
-        /// </summary>
+        public bool IsNotice { get; private set; }
+        public IUser User { get; private set; }
+        public string Target { get; private set; }
+        public string Message { get; private set; }
         public IIrcClient Client { get; private set; }
-
-        /// <summary>
-        /// Gets the message.
-        /// </summary>
-        public IMessage Message
-        {
-            get
-            {
-                return this.message;
-            }
-        }
-
-        #endregion
     }
 }

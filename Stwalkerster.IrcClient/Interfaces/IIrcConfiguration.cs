@@ -48,7 +48,15 @@
         /// </summary>
         bool Ssl { get; }
         
+        /// <summary>
+        /// A name for this client to reference it in the logs
+        /// </summary>
         string ClientName { get; }
+        
+        /// <summary>
+        /// Automatically restart when encountering heavy lag
+        /// </summary>
+        bool RestartOnHeavyLag { get; }
         
         #endregion
     }

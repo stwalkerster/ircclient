@@ -24,7 +24,8 @@
                             username: "stwtestbot",
                             realName: "stwtestbot",
                             ssl: false,
-                            clientName: "TestClient"
+                            clientName: "TestClient",
+                            restartOnHeavyLag: false
                         )));
             
             container.Install(FromAssembly.This());
@@ -37,9 +38,9 @@
             client.JoinChannel("##stwalkerster-development");
             client.ReceivedMessage += (sender, args) =>
             {
-                if (args.Message.Command == "PRIVMSG")
+                if (!args.IsNotice)
                 {
-                    var message = new Message(args.Message.Command, args.Message.Parameters);
+                    var message = new Message("PRIVMSG", new[] {"##stwalkerster-development", args.User.ToString()});
                     args.Client.Send(message);
                 }
             };

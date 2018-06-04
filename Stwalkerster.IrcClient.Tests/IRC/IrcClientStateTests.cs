@@ -1,5 +1,6 @@
 ﻿namespace Stwalkerster.IrcClient.Tests.IRC
 {
+    using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
@@ -7,6 +8,7 @@
     using NUnit.Framework;
     using Stwalkerster.IrcClient.Events;
     using Stwalkerster.IrcClient.Interfaces;
+    using Stwalkerster.IrcClient.Model;
 
     /// <summary>
     /// The IRC client state tests.
@@ -36,6 +38,7 @@
             this.IrcConfiguration.Setup(x => x.Nickname).Returns(nickName);
             this.IrcConfiguration.Setup(x => x.Username).Returns("username");
             this.IrcConfiguration.Setup(x => x.RealName).Returns("real name");
+            this.IrcConfiguration.Setup(x => x.RestartOnHeavyLag).Returns(false);
             this.SupportHelper
                 .Setup(x => x.HandlePrefixMessageSupport(It.IsAny<string>(), It.IsAny<IDictionary<string, string>>()))
                 .Callback(
@@ -47,6 +50,138 @@
             this.client = new IrcClient(this.networkClient.Object, this.Logger.Object, this.IrcConfiguration.Object, this.SupportHelper.Object);
         }
 
+        [Test]
+        public void TestAccountTrackingWithExistingUsers()
+        {
+            // initial client setup
+            this.DoSetup("stwtestbot");
+
+            // shortcut functions for logs
+            Action<string> i = data => this.networkClient.Raise(
+                x => x.DataReceived += null,
+                this.networkClient.Object,
+                new DataReceivedEventArgs(data));
+            Action<string> o = data => this.networkClient.Verify(x => x.Send(data));
+            
+            
+            
+            o("CAP LS");
+            i(":kornbluth.freenode.net CAP * LS :account-notify extended-join identify-msg multi-prefix sasl");
+            o("CAP REQ :account-notify extended-join multi-prefix");
+            i(":kornbluth.freenode.net CAP * ACK :account-notify extended-join multi-prefix");
+            o("CAP END");
+            o("USER username * * :real name");
+            o("NICK stwtestbot");
+            i(":kornbluth.freenode.net 001 stwtestbot :Welcome to the freenode Internet Relay Chat Network stwtestbot");
+            i(":stwtestbot MODE stwtestbot :+i");
+            o("MODE stwtestbot +Q");
+            i(":stwtestbot MODE stwtestbot :+Q");
+            
+            this.client.JoinChannel("##stwalkerster-development");
+            o("JOIN ##stwalkerster-development");
+            i(":stwtestbot!~stwtestbo@cpc104826-sgyl39-2-0-cust295.18-2.cable.virginm.net JOIN ##stwalkerster-development * :stwtestbot");
+            i(":kornbluth.freenode.net 353 stwtestbot = ##stwalkerster-development :stwtestbot @stwalkerster @ChanServ");
+            i(":kornbluth.freenode.net 366 stwtestbot ##stwalkerster-development :End of /NAMES list.");
+
+            // todo verify state
+            
+            o("WHO ##stwalkerster-development %uhnatfc,001");
+            i(":kornbluth.freenode.net 354 stwtestbot 001 ##stwalkerster-development ~stwtestbo cpc104826-sgyl39-2-0-cust295.18-2.cable.virginm.net stwtestbot H 0");
+            i(":kornbluth.freenode.net 354 stwtestbot 001 ##stwalkerster-development stwalkerst wikimedia/stwalkerster stwalkerster H@ stwalkerster");
+            i(":kornbluth.freenode.net 354 stwtestbot 001 ##stwalkerster-development ChanServ services. ChanServ H@ 0");
+            i(":kornbluth.freenode.net 315 stwtestbot ##stwalkerster-development :End of /WHO list.");
+            o("MODE ##stwalkerster-development");
+            i(":kornbluth.freenode.net 324 stwtestbot ##stwalkerster-development +ntf ##stwalkerster");
+            i(":kornbluth.freenode.net 329 stwtestbot ##stwalkerster-development 1364176563");
+            
+            // todo verify state
+            
+            // setup message handling
+            this.client.ReceivedMessage += (sender, args) =>
+                args.Client.SendMessage("##stwalkerster-development", args.User.ToString());
+            
+            i(":stwalkerster!stwalkerst@wikimedia/stwalkerster PRIVMSG ##stwalkerster-development :test");
+            o(
+                "PRIVMSG ##stwalkerster-development :" + new IrcUser
+                {
+                    Nickname = "stwalkerster",
+                    Username = "stwalkerst",
+                    Hostname = "wikimedia/stwalkerster",
+                    Account = "stwalkerster",
+                    Away = false
+                });
+
+            // todo verify state
+        }
+        
+        [Test]
+        public void TestAccountTrackingWithJoiningUsers()
+        {
+            // initial client setup
+            this.DoSetup("stwtestbot");
+
+            // shortcut functions for logs
+            Action<string> i = data => this.networkClient.Raise(
+                x => x.DataReceived += null,
+                this.networkClient.Object,
+                new DataReceivedEventArgs(data));
+            Action<string> o = data => this.networkClient.Verify(x => x.Send(data));
+            
+            
+            
+            o("CAP LS");
+            i(":orwell.freenode.net CAP * LS :account-notify extended-join identify-msg multi-prefix sasl");
+            o("CAP REQ :account-notify extended-join multi-prefix");
+            i(":orwell.freenode.net CAP * ACK :account-notify extended-join multi-prefix ");
+            o("CAP END");
+            o("USER username * * :real name");
+            o("NICK stwtestbot");
+            i(":orwell.freenode.net 001 stwtestbot :Welcome to the freenode Internet Relay Chat Network stwtestbot");
+            i(":stwtestbot MODE stwtestbot :+i");
+            o("MODE stwtestbot +Q");
+            i(":stwtestbot MODE stwtestbot :+Q");
+            
+            this.client.JoinChannel("##stwalkerster-development");
+            o("JOIN ##stwalkerster-development");
+            i(":stwtestbot!~stwtestbo@cpc104826-sgyl39-2-0-cust295.18-2.cable.virginm.net JOIN ##stwalkerster-development * :stwtestbot");
+            i(":orwell.freenode.net 353 stwtestbot = ##stwalkerster-development :stwtestbot @ChanServ");
+            i(":orwell.freenode.net 366 stwtestbot ##stwalkerster-development :End of /NAMES list.");
+
+            // todo verify state
+            
+            o("WHO ##stwalkerster-development %uhnatfc,001");
+            i(":orwell.freenode.net 354 stwtestbot 001 ##stwalkerster-development ~stwtestbo cpc104826-sgyl39-2-0-cust295.18-2.cable.virginm.net stwtestbot H 0");
+            i(":orwell.freenode.net 354 stwtestbot 001 ##stwalkerster-development ChanServ services. ChanServ H@ 0");
+            i(":orwell.freenode.net 315 stwtestbot ##stwalkerster-development :End of /WHO list.");
+            o("MODE ##stwalkerster-development");
+            i(":orwell.freenode.net 324 stwtestbot ##stwalkerster-development +ntf ##stwalkerster");
+            i(":orwell.freenode.net 329 stwtestbot ##stwalkerster-development 1364176563");
+            
+            // todo verify state
+            
+            i(":stwalkerster!stwalkerst@wikimedia/stwalkerster JOIN ##stwalkerster-development stwalkerster :Simon Walker (fearow.lon.stwalkerster.net)");
+            i(":ChanServ!ChanServ@services. MODE ##stwalkerster-development +o stwalkerster");
+            
+            // todo verify state
+            
+            // setup message handling
+            this.client.ReceivedMessage += (sender, args) =>
+                args.Client.SendMessage("##stwalkerster-development", args.User.ToString());
+            
+            i(":stwalkerster!stwalkerst@wikimedia/stwalkerster PRIVMSG ##stwalkerster-development :test");
+            o(
+                "PRIVMSG ##stwalkerster-development :" + new IrcUser
+                {
+                    Nickname = "stwalkerster",
+                    Username = "stwalkerst",
+                    Hostname = "wikimedia/stwalkerster",
+                    Account = "stwalkerster",
+                    Away = false
+                });
+
+            // todo verify state
+        }
+        
         /// <summary>
         /// Tests read from WHO and my JOIN.
         /// </summary>

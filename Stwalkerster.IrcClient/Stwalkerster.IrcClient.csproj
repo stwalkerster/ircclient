@@ -47,6 +47,7 @@
     <Compile Include="Events\InviteEventArgs.cs" />
     <Compile Include="Events\JoinEventArgs.cs" />
     <Compile Include="Events\KickedEventArgs.cs" />
+    <Compile Include="Events\IrcMessageReceivedEventArgs.cs" />
     <Compile Include="Events\MessageReceivedEventArgs.cs" />
     <Compile Include="Events\ModeEventArgs.cs" />
     <Compile Include="Events\UserEventArgsBase.cs" />
