@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics.CodeAnalysis;
     using System.Linq;
     using System.Security;
     using System.Text;
@@ -146,9 +147,9 @@
         private bool pingThreadAlive;
         private string expectedPingMessage;
         private readonly AutoResetEvent pingReplyEvent;
-        private Thread pingThread;
-        private int lagTimer = 0;
-        private bool restartOnHeavyLag;
+        private readonly Thread pingThread;
+        private int lagTimer;
+        private readonly bool restartOnHeavyLag;
 
         #endregion
 
@@ -555,7 +556,7 @@
                     else
                     {
                         ircUser.Nickname = nick;
-
+                        ircUser.SkeletonStatus = IrcUserSkeletonStatus.NickOnly;
                         this.userCache.Add(nick, ircUser);
                     }
 
@@ -563,6 +564,7 @@
                     ircUser.Username = user;
                     ircUser.Hostname = host;
                     ircUser.Away = away;
+                    ircUser.SkeletonStatus = IrcUserSkeletonStatus.Full;
 
                     if (this.channels[channel].Users.ContainsKey(ircUser.Nickname))
                     {
@@ -684,11 +686,12 @@
                     cachedUser.Account = parameters[0];
 
                     // flesh out the skeleton
-                    if (cachedUser.Skeleton && !((IrcUser) user).Skeleton)
+                    if (cachedUser.SkeletonStatus < ((IrcUser) user).SkeletonStatus)
                     {
                         cachedUser.Username = user.Username;
                         cachedUser.Hostname = user.Hostname;
-                        cachedUser.Skeleton = false;
+                        
+                        cachedUser.SkeletonStatus = IrcUserSkeletonStatus.Account;
                     }
                 }
                 else
@@ -755,51 +758,51 @@
         /// <param name="e">
         /// The e.
         /// </param>
-        /// <param name="user">
+        /// <param name="eventUser">
         /// The user.
         /// </param>
-        private void OnJoinReceived(IrcMessageReceivedEventArgs e, IUser user)
+        private void OnJoinReceived(IrcMessageReceivedEventArgs e, IUser eventUser)
         {
             // this is a client join to a channel.
             // :stwalkerster!stwalkerst@wikimedia/stwalkerster JOIN ##stwalkerster
             var parametersList = e.Message.Parameters.ToList();
 
-            var user1 = user;
+            var user = eventUser as IrcUser;
+            if (user == null)
+            {
+                throw new ArgumentException("Unsupported user type");
+            }
+                       
             lock (this.userOperationLock)
             {
-                if (this.userCache.ContainsKey(user1.Nickname))
+                if (this.userCache.ContainsKey(user.Nickname))
                 {
-                    // debugging hook for HMB-169
-                    if (user1.Nickname == "ChanServ")
-                    {
-                        this.logger.DebugFormat("HMB-169 Debug pre-cache: {0}", user1);
-                        this.logger.DebugFormat("HMB-169 Debug cache: {0}", this.userCache[user1.Nickname]);
-                    }
-
-                    var cachedUser = this.userCache[user1.Nickname];
+                    var cachedUser = this.userCache[user.Nickname];
 
                     // flesh out the skeleton
-                    if (cachedUser.Skeleton && !((IrcUser) user).Skeleton)
+                    if (cachedUser.SkeletonStatus < IrcUserSkeletonStatus.PrefixOnly)
                     {
-                        cachedUser.Hostname = user1.Hostname;
-                        cachedUser.Username = user1.Username;
-                        cachedUser.Skeleton = false;
+                        cachedUser.Hostname = user.Hostname;
+                        cachedUser.Username = user.Username;
+                        cachedUser.SkeletonStatus = IrcUserSkeletonStatus.PrefixOnly;
                     }
 
-                    user1 = cachedUser;
+                    user = cachedUser;
                 }
                 else
                 {
-                    this.userCache.Add(user1.Nickname, (IrcUser) user1);
+                    this.userCache.Add(user.Nickname, user);
                 }
             }
-
-            user = user1;
 
             if (this.capExtendedJoin)
             {
                 // :stwalkerster!stwalkerst@wikimedia/stwalkerster JOIN ##stwalkerster accountname :realname
-                user.Account = parametersList[1];
+                if (user.SkeletonStatus < IrcUserSkeletonStatus.Account)
+                {
+                    user.Account = parametersList[1];
+                    user.SkeletonStatus = IrcUserSkeletonStatus.Account;
+                }
             }
 
             var channelName = parametersList[0];
@@ -832,7 +835,7 @@
                         this.Channels[channelName]
                             .Users.Add(
                                 user.Nickname,
-                                new IrcChannelUser((IrcUser) user, channelName));
+                                new IrcChannelUser(user, channelName));
                     }
                     else
                     {
@@ -879,12 +882,11 @@
                         {
                             var cachedUser = this.userCache[user.Nickname];
 
-                            if (cachedUser.Skeleton)
+                            if (cachedUser.SkeletonStatus < IrcUserSkeletonStatus.PrefixOnly)
                             {
-                                cachedUser.Account = user.Account;
                                 cachedUser.Username = user.Username;
                                 cachedUser.Hostname = user.Hostname;
-                                cachedUser.Skeleton = false;
+                                cachedUser.SkeletonStatus = IrcUserSkeletonStatus.PrefixOnly;
                             }
 
                             user = cachedUser;
@@ -1007,6 +1009,15 @@
             }
         }
 
+        
+        /// <summary>
+        /// To be finished
+        /// </summary>
+        /// <remarks>
+        /// Remove code analysis suppression when finished implementation
+        /// </remarks>
+        /// <param name="e"></param>
+        [SuppressMessage("ReSharper", "UnusedVariable")]
         private void OnISupportMessageRecieved(IrcMessageReceivedEventArgs e)
         {
             // User modes in channels
@@ -1080,7 +1091,7 @@
                     }
                     else
                     {
-                        var ircUser = new IrcUser { Nickname = parsedName, Skeleton = true };
+                        var ircUser = new IrcUser { Nickname = parsedName, SkeletonStatus = IrcUserSkeletonStatus.NickOnly };
                         if (this.userCache.ContainsKey(parsedName))
                         {
                             ircUser = this.userCache[parsedName];
@@ -1124,11 +1135,11 @@
                     ircUser.Nickname = newNickname;
 
                     // flesh out the skeleton
-                    if (ircUser.Skeleton && !((IrcUser) user).Skeleton)
+                    if (ircUser.SkeletonStatus < IrcUserSkeletonStatus.PrefixOnly)
                     {
                         ircUser.Username = user.Username;
                         ircUser.Hostname = user.Hostname;
-                        ircUser.Skeleton = false;
+                        ircUser.SkeletonStatus = IrcUserSkeletonStatus.PrefixOnly;
                     }
 
                     try

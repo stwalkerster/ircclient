@@ -20,7 +20,7 @@
         /// <summary>
         /// Gets or sets a value indicating whether skeleton.
         /// </summary>
-        public bool Skeleton { get; set; }
+        public IrcUserSkeletonStatus SkeletonStatus { get; set; }
 
         /// <summary>
         /// Gets or sets the account.
@@ -93,7 +93,8 @@
                 nick = prefix;
             }
 
-            return new IrcUser {Hostname = host, Username = user, Nickname = nick, Skeleton = false};
+            // Yes, skeleton because Account is unavailable in the prefix.
+            return new IrcUser {Hostname = host, Username = user, Nickname = nick, SkeletonStatus = IrcUserSkeletonStatus.PrefixOnly};
         }
 
         /// <summary>

@@ -26,6 +26,96 @@
         /// </summary>
         private Mock<INetworkClient> networkClient;
 
+        [Test]
+        public void TestAccountTrackingWithExistingUsers()
+        {
+            // initial client setup
+            this.DoSetup("stwtestbot");
+
+            // shortcut functions for logs
+            Action<string> i = data => this.networkClient.Raise(
+                x => x.DataReceived += null,
+                this.networkClient.Object,
+                new DataReceivedEventArgs(data));
+            Action<string> o = data => this.networkClient.Verify(x => x.Send(data));
+
+            // Initial setup
+            o("CAP LS");
+            i(":kornbluth.freenode.net CAP * LS :account-notify extended-join identify-msg multi-prefix sasl");
+            o("CAP REQ :account-notify extended-join multi-prefix");
+            i(":kornbluth.freenode.net CAP * ACK :account-notify extended-join multi-prefix");
+            o("CAP END");
+            o("USER username * * :real name");
+            o("NICK stwtestbot");
+            i(":kornbluth.freenode.net 001 stwtestbot :Welcome to the freenode Internet Relay Chat Network stwtestbot");
+            i(":stwtestbot MODE stwtestbot :+i");
+            o("MODE stwtestbot +Q");
+            i(":stwtestbot MODE stwtestbot :+Q");
+
+            // Join channel
+            this.client.JoinChannel("##stwalkerster-development");
+            o("JOIN ##stwalkerster-development");
+            i(":stwtestbot!~stwtestbo@cpc104826-sgyl39-2-0-cust295.18-2.cable.virginm.net JOIN ##stwalkerster-development * :stwtestbot");
+            i(":kornbluth.freenode.net 353 stwtestbot = ##stwalkerster-development :stwtestbot @stwalkerster @ChanServ");
+            i(":kornbluth.freenode.net 366 stwtestbot ##stwalkerster-development :End of /NAMES list.");
+
+            Assert.AreEqual(3, this.client.UserCache.Count);
+            Assert.IsTrue(this.client.UserCache.ContainsKey("ChanServ"));
+            Assert.AreEqual(null, this.client.UserCache["ChanServ"].Hostname);
+            Assert.AreEqual(null, this.client.UserCache["ChanServ"].Account);
+            Assert.IsTrue(this.client.UserCache.ContainsKey("stwalkerster"));
+            Assert.AreEqual(null, this.client.UserCache["stwalkerster"].Hostname);
+            Assert.AreEqual(null, this.client.UserCache["stwalkerster"].Account);
+
+            // Sync channel
+            o("WHO ##stwalkerster-development %uhnatfc,001");
+            i(":kornbluth.freenode.net 354 stwtestbot 001 ##stwalkerster-development ~stwtestbo cpc104826-sgyl39-2-0-cust295.18-2.cable.virginm.net stwtestbot H 0");
+            i(":kornbluth.freenode.net 354 stwtestbot 001 ##stwalkerster-development stwalkerst wikimedia/stwalkerster stwalkerster H@ stwalkerster");
+            i(":kornbluth.freenode.net 354 stwtestbot 001 ##stwalkerster-development ChanServ services. ChanServ H@ 0");
+            i(":kornbluth.freenode.net 315 stwtestbot ##stwalkerster-development :End of /WHO list.");
+            o("MODE ##stwalkerster-development");
+            i(":kornbluth.freenode.net 324 stwtestbot ##stwalkerster-development +ntf ##stwalkerster");
+            i(":kornbluth.freenode.net 329 stwtestbot ##stwalkerster-development 1364176563");
+
+            Assert.AreEqual(3, this.client.UserCache.Count);
+            Assert.IsTrue(this.client.UserCache.ContainsKey("ChanServ"));
+            Assert.AreEqual("services.", this.client.UserCache["ChanServ"].Hostname);
+            Assert.AreEqual(null, this.client.UserCache["ChanServ"].Account);
+            Assert.AreEqual(false, this.client.UserCache["ChanServ"].Away);
+            Assert.IsTrue(this.client.UserCache.ContainsKey("stwalkerster"));
+            Assert.AreEqual("wikimedia/stwalkerster", this.client.UserCache["stwalkerster"].Hostname);
+            Assert.AreEqual("stwalkerster", this.client.UserCache["stwalkerster"].Account);
+            Assert.AreEqual(false, this.client.UserCache["stwalkerster"].Away);
+
+            // setup message handling
+            this.client.ReceivedMessage += (sender, args) =>
+                args.Client.SendMessage("##stwalkerster-development", args.User.ToString());
+
+            // Send message
+            i(":stwalkerster!stwalkerst@wikimedia/stwalkerster PRIVMSG ##stwalkerster-development :test");
+
+            Assert.AreEqual(3, this.client.UserCache.Count);
+            Assert.IsTrue(this.client.UserCache.ContainsKey("ChanServ"));
+            Assert.AreEqual("services.", this.client.UserCache["ChanServ"].Hostname);
+            Assert.AreEqual(null, this.client.UserCache["ChanServ"].Account);
+            Assert.AreEqual(false, this.client.UserCache["ChanServ"].Away);
+            Assert.IsTrue(this.client.UserCache.ContainsKey("stwalkerster"));
+            Assert.AreEqual("wikimedia/stwalkerster", this.client.UserCache["stwalkerster"].Hostname);
+            Assert.AreEqual("stwalkerster", this.client.UserCache["stwalkerster"].Account);
+            Assert.AreEqual(false, this.client.UserCache["stwalkerster"].Away);
+
+            // Verify correct return
+            o(
+                "PRIVMSG ##stwalkerster-development :" + new IrcUser
+                {
+                    Nickname = "stwalkerster",
+                    Username = "stwalkerst",
+                    Hostname = "wikimedia/stwalkerster",
+                    Account = "stwalkerster",
+                    Away = false
+                });
+        }
+
         /// <summary>
         /// The do setup.
         /// </summary>
@@ -51,70 +141,6 @@
         }
 
         [Test]
-        public void TestAccountTrackingWithExistingUsers()
-        {
-            // initial client setup
-            this.DoSetup("stwtestbot");
-
-            // shortcut functions for logs
-            Action<string> i = data => this.networkClient.Raise(
-                x => x.DataReceived += null,
-                this.networkClient.Object,
-                new DataReceivedEventArgs(data));
-            Action<string> o = data => this.networkClient.Verify(x => x.Send(data));
-            
-            
-            
-            o("CAP LS");
-            i(":kornbluth.freenode.net CAP * LS :account-notify extended-join identify-msg multi-prefix sasl");
-            o("CAP REQ :account-notify extended-join multi-prefix");
-            i(":kornbluth.freenode.net CAP * ACK :account-notify extended-join multi-prefix");
-            o("CAP END");
-            o("USER username * * :real name");
-            o("NICK stwtestbot");
-            i(":kornbluth.freenode.net 001 stwtestbot :Welcome to the freenode Internet Relay Chat Network stwtestbot");
-            i(":stwtestbot MODE stwtestbot :+i");
-            o("MODE stwtestbot +Q");
-            i(":stwtestbot MODE stwtestbot :+Q");
-            
-            this.client.JoinChannel("##stwalkerster-development");
-            o("JOIN ##stwalkerster-development");
-            i(":stwtestbot!~stwtestbo@cpc104826-sgyl39-2-0-cust295.18-2.cable.virginm.net JOIN ##stwalkerster-development * :stwtestbot");
-            i(":kornbluth.freenode.net 353 stwtestbot = ##stwalkerster-development :stwtestbot @stwalkerster @ChanServ");
-            i(":kornbluth.freenode.net 366 stwtestbot ##stwalkerster-development :End of /NAMES list.");
-
-            // todo verify state
-            
-            o("WHO ##stwalkerster-development %uhnatfc,001");
-            i(":kornbluth.freenode.net 354 stwtestbot 001 ##stwalkerster-development ~stwtestbo cpc104826-sgyl39-2-0-cust295.18-2.cable.virginm.net stwtestbot H 0");
-            i(":kornbluth.freenode.net 354 stwtestbot 001 ##stwalkerster-development stwalkerst wikimedia/stwalkerster stwalkerster H@ stwalkerster");
-            i(":kornbluth.freenode.net 354 stwtestbot 001 ##stwalkerster-development ChanServ services. ChanServ H@ 0");
-            i(":kornbluth.freenode.net 315 stwtestbot ##stwalkerster-development :End of /WHO list.");
-            o("MODE ##stwalkerster-development");
-            i(":kornbluth.freenode.net 324 stwtestbot ##stwalkerster-development +ntf ##stwalkerster");
-            i(":kornbluth.freenode.net 329 stwtestbot ##stwalkerster-development 1364176563");
-            
-            // todo verify state
-            
-            // setup message handling
-            this.client.ReceivedMessage += (sender, args) =>
-                args.Client.SendMessage("##stwalkerster-development", args.User.ToString());
-            
-            i(":stwalkerster!stwalkerst@wikimedia/stwalkerster PRIVMSG ##stwalkerster-development :test");
-            o(
-                "PRIVMSG ##stwalkerster-development :" + new IrcUser
-                {
-                    Nickname = "stwalkerster",
-                    Username = "stwalkerst",
-                    Hostname = "wikimedia/stwalkerster",
-                    Account = "stwalkerster",
-                    Away = false
-                });
-
-            // todo verify state
-        }
-        
-        [Test]
         public void TestAccountTrackingWithJoiningUsers()
         {
             // initial client setup
@@ -126,8 +152,6 @@
                 this.networkClient.Object,
                 new DataReceivedEventArgs(data));
             Action<string> o = data => this.networkClient.Verify(x => x.Send(data));
-            
-            
             
             o("CAP LS");
             i(":orwell.freenode.net CAP * LS :account-notify extended-join identify-msg multi-prefix sasl");
@@ -147,7 +171,10 @@
             i(":orwell.freenode.net 353 stwtestbot = ##stwalkerster-development :stwtestbot @ChanServ");
             i(":orwell.freenode.net 366 stwtestbot ##stwalkerster-development :End of /NAMES list.");
 
-            // todo verify state
+            Assert.AreEqual(2, this.client.UserCache.Count);
+            Assert.IsTrue(this.client.UserCache.ContainsKey("ChanServ"));
+            Assert.AreEqual(null, this.client.UserCache["ChanServ"].Hostname);
+            Assert.AreEqual(null, this.client.UserCache["ChanServ"].Account);
             
             o("WHO ##stwalkerster-development %uhnatfc,001");
             i(":orwell.freenode.net 354 stwtestbot 001 ##stwalkerster-development ~stwtestbo cpc104826-sgyl39-2-0-cust295.18-2.cable.virginm.net stwtestbot H 0");
@@ -156,13 +183,24 @@
             o("MODE ##stwalkerster-development");
             i(":orwell.freenode.net 324 stwtestbot ##stwalkerster-development +ntf ##stwalkerster");
             i(":orwell.freenode.net 329 stwtestbot ##stwalkerster-development 1364176563");
-            
-            // todo verify state
+
+            Assert.AreEqual(2, this.client.UserCache.Count);
+            Assert.IsTrue(this.client.UserCache.ContainsKey("ChanServ"));
+            Assert.AreEqual("services.", this.client.UserCache["ChanServ"].Hostname);
+            Assert.AreEqual(null, this.client.UserCache["ChanServ"].Account);
+            Assert.AreEqual(false, this.client.UserCache["ChanServ"].Away);
             
             i(":stwalkerster!stwalkerst@wikimedia/stwalkerster JOIN ##stwalkerster-development stwalkerster :Simon Walker (fearow.lon.stwalkerster.net)");
             i(":ChanServ!ChanServ@services. MODE ##stwalkerster-development +o stwalkerster");
-            
-            // todo verify state
+
+            Assert.AreEqual(3, this.client.UserCache.Count);
+            Assert.IsTrue(this.client.UserCache.ContainsKey("ChanServ"));
+            Assert.AreEqual("services.", this.client.UserCache["ChanServ"].Hostname);
+            Assert.AreEqual(null, this.client.UserCache["ChanServ"].Account);
+            Assert.AreEqual(false, this.client.UserCache["ChanServ"].Away);
+            Assert.IsTrue(this.client.UserCache.ContainsKey("stwalkerster"));
+            Assert.AreEqual("wikimedia/stwalkerster", this.client.UserCache["stwalkerster"].Hostname);
+            Assert.AreEqual("stwalkerster", this.client.UserCache["stwalkerster"].Account);
             
             // setup message handling
             this.client.ReceivedMessage += (sender, args) =>

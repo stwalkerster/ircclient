@@ -4,6 +4,7 @@
     using NUnit.Framework;
     using Stwalkerster.IrcClient.Events;
     using Stwalkerster.IrcClient.Interfaces;
+    using Stwalkerster.IrcClient.Model;
     using Stwalkerster.IrcClient.Model.Interfaces;
 
     /// <summary>
@@ -94,7 +95,7 @@
             Assert.That(client.UserCache.ContainsKey("FastLizard4"));
 
             // OK, Flizzy should still be a skeleton.
-            Assert.That(client.UserCache["FastLizard4"].Skeleton);
+            Assert.That(client.UserCache["FastLizard4"].SkeletonStatus, Is.EqualTo(IrcUserSkeletonStatus.NickOnly));
 
             // ... and stwalkerster shouldn't exist.
             Assert.That(client.UserCache.ContainsKey("stwalkerster"), Is.False);
@@ -105,7 +106,7 @@
 
             // ... and stwalkerster should now exist as a real user
             Assert.That(client.UserCache.ContainsKey("stwalkerster"));
-            Assert.That(client.UserCache["stwalkerster"].Skeleton, Is.False);
+            Assert.That(client.UserCache["stwalkerster"].SkeletonStatus, Is.EqualTo(IrcUserSkeletonStatus.Account));
             Assert.That(client.UserCache["stwalkerster"].Username, Is.EqualTo("~stwalkers"));
             Assert.That(client.UserCache["stwalkerster"].Hostname, Is.EqualTo("wikimedia/stwalkerster"));
             Assert.That(client.UserCache["stwalkerster"].Account, Is.EqualTo("stwalkerster"));
@@ -117,7 +118,7 @@
             // ... and werelizard should now exist as a real user, but not Flizzy
             Assert.That(client.UserCache.ContainsKey("FastLizard4"), Is.False);
             Assert.That(client.UserCache.ContainsKey("werelizard"), Is.True);
-            Assert.That(client.UserCache["werelizard"].Skeleton, Is.False);
+            Assert.That(client.UserCache["werelizard"].SkeletonStatus, Is.EqualTo(IrcUserSkeletonStatus.PrefixOnly));
             Assert.That(client.UserCache["werelizard"].Username, Is.EqualTo("fastlizard"));
             Assert.That(client.UserCache["werelizard"].Hostname, Is.EqualTo("wikipedia/pdpc.active.FastLizard4"));
             Assert.That(client.UserCache["werelizard"].Nickname, Is.EqualTo("werelizard"));
