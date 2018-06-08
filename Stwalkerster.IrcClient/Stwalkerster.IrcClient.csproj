@@ -71,6 +71,7 @@
     <Compile Include="Model\IrcChannel.cs" />
     <Compile Include="Model\IrcChannelUser.cs" />
     <Compile Include="Model\IrcUser.cs" />
+    <Compile Include="Model\IrcUserMask.cs" />
     <Compile Include="Model\IrcUserSkeletonStatus.cs" />
     <Compile Include="Model\ServerUser.cs" />
     <Compile Include="Network\NetworkClient.cs" />

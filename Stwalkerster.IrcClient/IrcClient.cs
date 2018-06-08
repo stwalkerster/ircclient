@@ -313,6 +313,9 @@
         }
 
         public string ClientName { get; private set; }
+        
+        public string ExtBanDelimiter { get; private set; }
+        public string ExtBanTypes { get; private set; }
 
         #endregion
 
@@ -383,7 +386,7 @@
         /// </returns>
         public IrcUser LookupUser(string prefix)
         {
-            var parsedUser = IrcUser.FromPrefix(prefix);
+            var parsedUser = IrcUser.FromPrefix(prefix, this);
 
             lock (this.userOperationLock)
             {
@@ -548,7 +551,7 @@
 
                 lock (this.userOperationLock)
                 {
-                    var ircUser = new IrcUser();
+                    var ircUser = new IrcUser(this);
                     if (this.userCache.ContainsKey(nick))
                     {
                         ircUser = this.userCache[nick];
@@ -873,7 +876,7 @@
                 else
                 {
                     // parse it into something reasonable
-                    user = IrcUser.FromPrefix(e.Message.Prefix);
+                    user = IrcUser.FromPrefix(e.Message.Prefix, this);
 
                     lock (this.userOperationLock)
                     {
@@ -1034,6 +1037,14 @@
                 this.supportHelper.HandleStatusMessageSupport(statusMessage, this.destinationFlags);
             }
 
+            var extbans = e.Message.Parameters.FirstOrDefault(x => x.StartsWith("EXTBAN="));
+            if (extbans != null)
+            {
+                var extBanData = extbans.Split('=')[1].Split(',');
+                this.ExtBanDelimiter = extBanData[0];
+                this.ExtBanTypes = extBanData[1];
+            }
+
             // TODO: finish me
             
             // Max mode changes in one command
@@ -1091,7 +1102,7 @@
                     }
                     else
                     {
-                        var ircUser = new IrcUser { Nickname = parsedName, SkeletonStatus = IrcUserSkeletonStatus.NickOnly };
+                        var ircUser = new IrcUser(this) { Nickname = parsedName, SkeletonStatus = IrcUserSkeletonStatus.NickOnly };
                         if (this.userCache.ContainsKey(parsedName))
                         {
                             ircUser = this.userCache[parsedName];

@@ -1,6 +1,12 @@
 ﻿namespace Stwalkerster.IrcClient.Tests.IRC.Model
 {
+    using System.Runtime.CompilerServices;
+
+    using Moq;
+
     using NUnit.Framework;
+
+    using Stwalkerster.IrcClient.Interfaces;
     using Stwalkerster.IrcClient.Model;
 
     /// <summary>
@@ -9,6 +15,14 @@
     [TestFixture]
     public class IrcUserTests : TestBase
     {
+        private IIrcClient client;
+        
+        [OneTimeSetUp]
+        public void FixtureSetup()
+        {
+            this.client = new Mock<IIrcClient>().Object;
+        }
+        
         /// <summary>
         /// The should create from prefix.
         /// </summary>
@@ -17,7 +31,7 @@
         {
             // arrange
             const string Prefix = "Yetanotherx|afk!~Yetanothe@mcbouncer.com";
-            var expected = new IrcUser
+            var expected = new IrcUser(this.client)
                                {
                                    Hostname = "mcbouncer.com",
                                    Username = "~Yetanothe",
@@ -25,7 +39,7 @@
                                };
 
             // act
-            var actual = IrcUser.FromPrefix(Prefix);
+            var actual = IrcUser.FromPrefix(Prefix, this.client);
 
             // assert
             Assert.That(actual, Is.EqualTo(expected));
@@ -39,14 +53,14 @@
         {
             // arrange
             const string Prefix = "stwalkerster@foo.com";
-            var expected = new IrcUser
+            var expected = new IrcUser(this.client)
             {
                 Hostname = "foo.com",
                 Nickname = "stwalkerster"
             };
 
             // act
-            var actual = IrcUser.FromPrefix(Prefix);
+            var actual = IrcUser.FromPrefix(Prefix, this.client);
 
             // assert
             Assert.That(actual, Is.EqualTo(expected));
@@ -60,13 +74,13 @@
         {
             // arrange
             const string Prefix = "stwalkerster";
-            var expected = new IrcUser
+            var expected = new IrcUser(this.client)
             {
                 Nickname = "stwalkerster"
             };
 
             // act
-            var actual = IrcUser.FromPrefix(Prefix);
+            var actual = IrcUser.FromPrefix(Prefix, this.client);
 
             // assert
             Assert.That(actual, Is.EqualTo(expected));
@@ -80,7 +94,7 @@
         {
             // arrange
             const string Prefix = "nick!user@host";
-            var expected = new IrcUser
+            var expected = new IrcUser(this.client)
             {
                 Hostname = "host",
                 Username = "user",
@@ -88,7 +102,7 @@
             };
 
             // act
-            var actual = IrcUser.FromPrefix(Prefix);
+            var actual = IrcUser.FromPrefix(Prefix, this.client);
 
             // assert
             Assert.That(actual, Is.EqualTo(expected));
@@ -102,7 +116,7 @@
         {
             // arrange
             const string Prefix = "ChanServ!ChanServ@services.";
-            var expected = new IrcUser
+            var expected = new IrcUser(this.client)
             {
                 Hostname = "services.",
                 Username = "ChanServ",
@@ -110,7 +124,7 @@
             };
 
             // act
-            var actual = IrcUser.FromPrefix(Prefix);
+            var actual = IrcUser.FromPrefix(Prefix, this.client);
 
             // assert
             Assert.That(actual, Is.EqualTo(expected));

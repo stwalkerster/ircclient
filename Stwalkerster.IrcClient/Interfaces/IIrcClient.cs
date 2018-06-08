@@ -84,6 +84,8 @@
 
         bool NetworkConnected { get; }
         string ClientName { get; }
+        string ExtBanDelimiter { get; }
+        string ExtBanTypes { get; }
 
         #endregion
 

@@ -1,5 +1,6 @@
 ﻿namespace Stwalkerster.IrcClient.Model
 {
+    using Stwalkerster.IrcClient.Interfaces;
     using Stwalkerster.IrcClient.Model.Interfaces;
 
     /// <summary>
@@ -12,10 +13,17 @@
         /// </summary>
         private string account;
 
+        public IrcUser(IIrcClient client)
+        {
+            this.Client = client;
+        }
+
         /// <summary>
         /// Gets or sets a value indicating whether away.
         /// </summary>
         public bool Away { get; set; }
+        
+        public IIrcClient Client { get; private set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether skeleton.
@@ -66,7 +74,7 @@
         /// <returns>
         /// The <see cref="IrcUser" />.
         /// </returns>
-        public static IrcUser FromPrefix(string prefix)
+        public static IrcUser FromPrefix(string prefix, IIrcClient client)
         {
             string nick;
             string user = null;
@@ -94,7 +102,7 @@
             }
 
             // Yes, skeleton because Account is unavailable in the prefix.
-            return new IrcUser {Hostname = host, Username = user, Nickname = nick, SkeletonStatus = IrcUserSkeletonStatus.PrefixOnly};
+            return new IrcUser(client) {Hostname = host, Username = user, Nickname = nick, SkeletonStatus = IrcUserSkeletonStatus.PrefixOnly};
         }
 
         /// <summary>

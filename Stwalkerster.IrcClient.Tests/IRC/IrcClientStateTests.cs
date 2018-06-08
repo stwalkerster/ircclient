@@ -106,7 +106,7 @@
 
             // Verify correct return
             o(
-                "PRIVMSG ##stwalkerster-development :" + new IrcUser
+                "PRIVMSG ##stwalkerster-development :" + new IrcUser(this.client)
                 {
                     Nickname = "stwalkerster",
                     Username = "stwalkerst",
@@ -208,7 +208,7 @@
             
             i(":stwalkerster!stwalkerst@wikimedia/stwalkerster PRIVMSG ##stwalkerster-development :test");
             o(
-                "PRIVMSG ##stwalkerster-development :" + new IrcUser
+                "PRIVMSG ##stwalkerster-development :" + new IrcUser(this.client)
                 {
                     Nickname = "stwalkerster",
                     Username = "stwalkerst",

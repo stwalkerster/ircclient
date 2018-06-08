@@ -58,6 +58,7 @@
     <Compile Include="IRC\IrcClientStateTests.cs" />
     <Compile Include="IRC\IrcClientTests.cs" />
     <Compile Include="IRC\Messages\MessageTests.cs" />
+    <Compile Include="IRC\Model\IrcUserMaskTests.cs" />
     <Compile Include="IRC\Model\IrcUserTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestBase.cs" />
