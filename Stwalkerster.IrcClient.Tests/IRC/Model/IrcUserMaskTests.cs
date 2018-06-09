@@ -1,6 +1,5 @@
 ﻿namespace Stwalkerster.IrcClient.Tests.IRC.Model
 {
-    using System;
     using System.Collections;
 
     using Moq;
@@ -84,6 +83,7 @@
         {
             var client = new Mock<IIrcClient>();
             client.Setup(x => x.ExtBanDelimiter).Returns(string.Empty);
+            client.Setup(x => x.ExtBanTypes).Returns("a");
 
             var user = new IrcUser(client.Object)
             {
