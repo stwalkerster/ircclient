@@ -16,23 +16,38 @@
         
         public IrcUserMask(string mask, IIrcClient client)
         {
-            var extMask = new Regex(
-                @"(?:^" + Regex.Escape(client.ExtBanDelimiter)
-                        + @"(?<inverted>~?)(?<type>[a-z])(:(?<parameter>.+))?$)");
-            
-            // must match either n!u@h, or an extban as supported by the client. Extbans are a bit more restrictive, so check that first.
-            var extMatch = extMask.Match(mask);
-            if (extMatch.Success)
+            var skipExtBans = false;
+            if (string.IsNullOrEmpty(client.ExtBanTypes))
             {
-                this.type = extMatch.Groups["type"].Value;
-                this.inverted = extMatch.Groups["inverted"].Value == "~";
-                this.parameter = extMatch.Groups["parameter"].Success ? extMatch.Groups["parameter"].Value : null;
-                
-                this.isExtMask = true;
-                
-                return;
+                client.WaitOnRegistration();
+                if (string.IsNullOrEmpty(client.ExtBanTypes))
+                {
+                    // ext bans aren't available at all here.
+                    skipExtBans = true;
+                    this.isExtMask = false;
+                }
             }
-            
+
+            if (!skipExtBans)
+            {
+                var extMask = new Regex(
+                    @"(?:^" + Regex.Escape(client.ExtBanDelimiter)
+                            + @"(?<inverted>~?)(?<type>[a-z])(:(?<parameter>.+))?$)");
+
+                // must match either n!u@h, or an extban as supported by the client. Extbans are a bit more restrictive, so check that first.
+                var extMatch = extMask.Match(mask);
+                if (extMatch.Success)
+                {
+                    this.type = extMatch.Groups["type"].Value;
+                    this.inverted = extMatch.Groups["inverted"].Value == "~";
+                    this.parameter = extMatch.Groups["parameter"].Success ? extMatch.Groups["parameter"].Value : null;
+
+                    this.isExtMask = true;
+
+                    return;
+                }
+            }
+
             var nuhMatch = NuhMask.Match(mask);
             if (nuhMatch.Success)
             {

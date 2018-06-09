@@ -348,6 +348,11 @@
         /// </summary>
         public void WaitOnRegistration()
         {
+            if (connectionRegistered)
+            {
+                return;
+            }
+            
             this.connectionRegistrationSemaphore.WaitOne();
             this.connectionRegistrationSemaphore.Release();
         }
