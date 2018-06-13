@@ -200,6 +200,8 @@
             
             this.pingReplyEvent = new AutoResetEvent(false);
             this.pingThread = new Thread(this.PingThreadWorker);
+            this.PingInterval = 15;
+            this.PingTimeout = 15;
 
             this.connectionRegistrationSemaphore = new Semaphore(0, 1);
             this.syncLogger.Debug("ctor() acquired connectionRegistration semaphore.");
@@ -316,6 +318,9 @@
         
         public string ExtBanDelimiter { get; private set; }
         public string ExtBanTypes { get; private set; }
+        
+        public int PingTimeout { get; set; }
+        public int PingInterval { get; set; }
 
         #endregion
 
@@ -650,8 +655,13 @@
         private void Disconnect(string errorMessage)
         {
             this.pingThreadAlive = false;
-            this.pingThread.Abort();
-            
+
+            if (!this.pingThread.Equals(Thread.CurrentThread))
+            {
+                // we're not on this thread, so forcibly abort it now.
+                this.pingThread.Abort();
+            }
+
             this.logger.Fatal(errorMessage);
             this.networkClient.Disconnect();
 
@@ -1569,18 +1579,17 @@
         private void PingThreadWorker()
         {
             this.pingThreadAlive = true;
-            var timeout = TimeSpan.FromSeconds(15);
             var timerWait = new AutoResetEvent(false);
 
             while (this.pingThreadAlive)
             {
-                timerWait.WaitOne(timeout);
+                timerWait.WaitOne(TimeSpan.FromSeconds(this.PingInterval));
 
                 var totalSeconds = (int)DateTime.UtcNow.Subtract(new DateTime(1970,1,1,0,0,0,0)).TotalSeconds;
                 this.expectedPingMessage = string.Format("GNU Terry Pratchett {0}", totalSeconds);
 
                 this.networkClient.PrioritySend(string.Format("PING :{0}", this.expectedPingMessage));
-                var result = this.pingReplyEvent.WaitOne(timeout);
+                var result = this.pingReplyEvent.WaitOne(TimeSpan.FromSeconds(this.PingTimeout));
 
                 if (!result)
                 {

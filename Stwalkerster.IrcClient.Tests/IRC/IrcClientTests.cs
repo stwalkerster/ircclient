@@ -1,5 +1,11 @@
 ﻿namespace Stwalkerster.IrcClient.Tests.IRC
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Threading;
+
+    using Castle.Core.Logging;
+
     using Moq;
     using NUnit.Framework;
     using Stwalkerster.IrcClient.Events;
@@ -122,6 +128,119 @@
             Assert.That(client.UserCache["werelizard"].Username, Is.EqualTo("fastlizard"));
             Assert.That(client.UserCache["werelizard"].Hostname, Is.EqualTo("wikipedia/pdpc.active.FastLizard4"));
             Assert.That(client.UserCache["werelizard"].Nickname, Is.EqualTo("werelizard"));
+        }
+
+        [Test]
+        public void TestDisconnectEventRaised()
+        {
+            var logger = new Mock<ILogger>();
+            logger.Setup(x => x.CreateChildLogger(It.IsAny<string>())).Returns(logger.Object);
+            
+            // arrange
+            var networkClient = new Mock<INetworkClient>();
+            this.IrcConfiguration.Setup(x => x.Nickname).Returns("nick");
+            this.IrcConfiguration.Setup(x => x.Username).Returns("username");
+            this.IrcConfiguration.Setup(x => x.RealName).Returns("real name");
+            this.IrcConfiguration.Setup(x => x.RestartOnHeavyLag).Returns(false);
+            this.SupportHelper
+                .Setup(x => x.HandlePrefixMessageSupport(It.IsAny<string>(), It.IsAny<IDictionary<string, string>>()))
+                .Callback(
+                    (string s, IDictionary<string, string> r) =>
+                    {
+                        r.Add("v", "+");
+                        r.Add("o", "@");
+                    });
+            var client = new IrcClient(networkClient.Object, logger.Object, this.IrcConfiguration.Object, this.SupportHelper.Object);
+
+            // shortcuts
+            Action<string> i = data => networkClient.Raise(
+                x => x.DataReceived += null,
+                networkClient.Object,
+                new DataReceivedEventArgs(data));
+            Action<string> o = data => networkClient.Verify(x => x.Send(data));
+            
+            o("CAP LS");
+            i(":orwell.freenode.net CAP * LS :account-notify extended-join identify-msg multi-prefix sasl");
+            o("CAP REQ :account-notify extended-join multi-prefix");
+            i(":orwell.freenode.net CAP * ACK :account-notify extended-join multi-prefix ");
+            o("CAP END");
+            o("USER username * * :real name");
+            o("NICK nick");
+            i(":orwell.freenode.net 001 nick :Welcome to the freenode Internet Relay Chat Network nick");
+            i(":stwtestbot MODE nick :+i");
+            o("MODE nick +Q");
+            i(":nick MODE nick :+Q");
+
+            bool fired = false;
+            client.DisconnectedEvent += (sender, args) => { fired = true; }; 
+            
+            networkClient.Raise(x => x.Disconnected += null, networkClient, new EventArgs());
+
+            networkClient.Verify(x => x.Disconnect(), Times.Once());
+            Assert.True(fired);
+        }
+        [Test]
+        public void TestDisconnectEventRaisedOnTimeout()
+        {
+            var logger = new Mock<ILogger>();
+            logger.Setup(x => x.CreateChildLogger(It.IsAny<string>())).Returns(logger.Object);
+            
+            // arrange
+            var networkClient = new Mock<INetworkClient>();
+            this.IrcConfiguration.Setup(x => x.Nickname).Returns("nick");
+            this.IrcConfiguration.Setup(x => x.Username).Returns("username");
+            this.IrcConfiguration.Setup(x => x.RealName).Returns("real name");
+            this.IrcConfiguration.Setup(x => x.RestartOnHeavyLag).Returns(true);
+            this.SupportHelper
+                .Setup(x => x.HandlePrefixMessageSupport(It.IsAny<string>(), It.IsAny<IDictionary<string, string>>()))
+                .Callback(
+                    (string s, IDictionary<string, string> r) =>
+                    {
+                        r.Add("v", "+");
+                        r.Add("o", "@");
+                    });
+            var client = new IrcClient(networkClient.Object, logger.Object, this.IrcConfiguration.Object, this.SupportHelper.Object);
+            client.PingTimeout = 1;
+            client.PingInterval = 1;
+            
+            // shortcuts
+            Action<string> i = data => networkClient.Raise(
+                x => x.DataReceived += null,
+                networkClient.Object,
+                new DataReceivedEventArgs(data));
+            Action<string> o = data => networkClient.Verify(x => x.Send(data));
+            Action<string> op = data => networkClient.Verify(x => x.PrioritySend(It.Is<string>(s => s.StartsWith(data))));
+            
+            o("CAP LS");
+            i(":orwell.freenode.net CAP * LS :account-notify extended-join identify-msg multi-prefix sasl");
+            o("CAP REQ :account-notify extended-join multi-prefix");
+            i(":orwell.freenode.net CAP * ACK :account-notify extended-join multi-prefix ");
+            o("CAP END");
+            o("USER username * * :real name");
+            o("NICK nick");
+            i(":orwell.freenode.net 001 nick :Welcome to the freenode Internet Relay Chat Network nick");
+            i(":stwtestbot MODE nick :+i");
+            o("MODE nick +Q");
+            i(":nick MODE nick :+Q");
+            
+            bool fired = false;
+            client.DisconnectedEvent += (sender, args) => { fired = true; };
+            
+            Thread.Sleep(1000);
+            op("PING ");
+            Thread.Sleep(2000);
+            Assert.False(fired);
+            op("PING ");
+            Assert.False(fired);
+            Thread.Sleep(2000);
+            Assert.False(fired);
+            op("PING ");
+            Assert.False(fired);
+            Thread.Sleep(1000);
+            Assert.True(fired);
+
+            networkClient.Verify(x => x.Disconnect(), Times.Once());
+            Assert.True(fired);
         }
     }
 }
