@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<vcs-root xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" uuid="2029e469-c224-4bd6-884a-a46d80ddff95" type="jetbrains.git" xsi:noNamespaceSchemaLocation="http://www.jetbrains.com/teamcity/schemas/2018.1/project-config.xsd">
+  <name>IRCclient</name>
+  <param name="agentCleanFilesPolicy" value="ALL_UNTRACKED" />
+  <param name="agentCleanPolicy" value="ON_BRANCH_CHANGE" />
+  <param name="authMethod" value="TEAMCITY_SSH_KEY" />
+  <param name="branch" value="refs/heads/master" />
+  <param name="ignoreKnownHosts" value="true" />
+  <param name="submoduleCheckout" value="CHECKOUT" />
+  <param name="teamcitySshKey" value="TeamCity key" />
+  <param name="url" value="ssh://git@phabricator.stwalkerster.co.uk/diffusion/IRC/stwalkerster-ircclient.git" />
+  <param name="useAlternates" value="true" />
+  <param name="userForTags" value="TeamCity &lt;teamcity@stwalkerster.co.uk&gt;" />
+  <param name="usernameStyle" value="FULL" />
+</vcs-root>
+
