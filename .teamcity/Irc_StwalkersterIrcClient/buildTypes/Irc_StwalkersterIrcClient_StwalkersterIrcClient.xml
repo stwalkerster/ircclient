@@ -2,98 +2,12 @@
 <build-type xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" uuid="9443478d-b1f1-4b0c-88d7-1c254cb72ed5" xsi:noNamespaceSchemaLocation="http://www.jetbrains.com/teamcity/schemas/2018.1/project-config.xsd">
   <name>Stwalkerster.IrcClient</name>
   <description />
-  <settings>
-    <options>
-      <option name="buildNumberPattern" value="%version%.%build.counter%" />
-    </options>
-    <parameters>
-      <param name="system.Configuration" value="Release" />
-      <param name="system.DefineConstants" value="PARSERTESTS" />
-      <param name="version" value="8.1" />
-    </parameters>
-    <build-runners>
-      <runner id="RUNNER_14" name="" type="jb.nuget.installer">
-        <parameters>
-          <param name="nuget.path" value="%teamcity.tool.NuGet.CommandLine.DEFAULT%" />
-          <param name="nuget.sources" value="https://nexus.scimonshouse.net/repository/nuget-group/" />
-          <param name="nuget.updatePackages.mode" value="sln" />
-          <param name="nuget.use.restore" value="restore" />
-          <param name="sln.path" value="IRCLib.sln" />
-          <param name="teamcity.step.mode" value="default" />
-        </parameters>
-      </runner>
-      <runner id="RUNNER_13" name="Build" type="MSBuild">
-        <parameters>
-          <param name="build-file-path" value="IRCLib.sln" />
-          <param name="dotNetCoverage.NCover.HTMLReport.File.Sort" value="0" />
-          <param name="dotNetCoverage.NCover.HTMLReport.File.Type" value="1" />
-          <param name="dotNetCoverage.NCover.Reg" value="selected" />
-          <param name="dotNetCoverage.NCover.platformBitness" value="x86" />
-          <param name="dotNetCoverage.NCover.platformVersion" value="v2.0" />
-          <param name="dotNetCoverage.NCover3.Reg" value="selected" />
-          <param name="dotNetCoverage.NCover3.args" value="//ias .*" />
-          <param name="dotNetCoverage.NCover3.platformBitness" value="x86" />
-          <param name="dotNetCoverage.NCover3.platformVersion" value="v2.0" />
-          <param name="dotNetCoverage.NCover3.reporter.executable.args" value="//or FullCoverageReport:Html:{teamcity.report.path}" />
-          <param name="dotNetCoverage.PartCover.Reg" value="selected" />
-          <param name="dotNetCoverage.PartCover.includes" value="[*]*" />
-          <param name="dotNetCoverage.PartCover.platformBitness" value="x86" />
-          <param name="dotNetCoverage.PartCover.platformVersion" value="v2.0" />
-          <param name="dotNetCoverage.dotCover.home.path" value="%teamcity.tool.JetBrains.dotCover.CommandLineTools.DEFAULT%" />
-          <param name="msbuild_version" value="mono_4.5" />
-          <param name="run-platform" value="x86" />
-          <param name="targets" value="Build" />
-          <param name="teamcity.step.mode" value="default" />
-          <param name="toolsVersion" value="4.0" />
-        </parameters>
-      </runner>
-      <runner id="RUNNER_15" name="Run Tests" type="simpleRunner">
-        <parameters>
-          <param name="command.executable" value="mono" />
-          <param name="command.parameters" value="packages/NUnit.ConsoleRunner.3.9.0/tools/nunit3-console.exe Stwalkerster.IrcClient.Tests/bin/Release/Stwalkerster.IrcClient.Tests.dll --teamcity" />
-          <param name="teamcity.step.mode" value="default" />
-        </parameters>
-      </runner>
-      <runner id="RUNNER_16" name="" type="jb.nuget.pack">
-        <parameters>
-          <param name="nuget.pack.as.artifact" value="true" />
-          <param name="nuget.pack.commandline" value="-MsbuildPath /usr/lib/mono/msbuild/15.0/bin/" />
-          <param name="nuget.pack.output.clean" value="true" />
-          <param name="nuget.pack.output.directory" value="output/" />
-          <param name="nuget.pack.project.dir" value="as_is" />
-          <param name="nuget.pack.properties" value="Configuration=Release" />
-          <param name="nuget.pack.specFile" value="Stwalkerster.IrcClient/Stwalkerster.IrcClient.csproj" />
-          <param name="nuget.path" value="%teamcity.tool.NuGet.CommandLine.DEFAULT%" />
-          <param name="teamcity.step.mode" value="default" />
-        </parameters>
-      </runner>
-    </build-runners>
-    <vcs-settings>
-      <vcs-entry-ref root-id="Irc_IRCclient" />
-      <vcs-entry-ref root-id="EyeInTheSky_ParserTests">
-        <checkout-rule rule="+:parsertests =&gt; parsertests" />
-      </vcs-entry-ref>
-    </vcs-settings>
+  <settings ref="Irc_StwalkersterIrcClient_DotNetLibrary">
+    <parameters />
+    <build-runners />
+    <vcs-settings />
     <requirements />
-    <build-triggers>
-      <build-trigger id="vcsTrigger" type="vcsTrigger">
-        <parameters>
-          <param name="groupCheckinsByCommitter" value="true" />
-          <param name="perCheckinTriggering" value="true" />
-          <param name="quietPeriodMode" value="DO_NOT_USE" />
-        </parameters>
-      </build-trigger>
-    </build-triggers>
-    <build-extensions>
-      <extension id="JetBrains.AssemblyInfo" type="JetBrains.AssemblyInfo">
-        <parameters>
-          <param name="assembly-format" value="%version%.0.0" />
-          <param name="file-format" value="%version%.%build.counter%" />
-          <param name="info-format" value="%version%.%build.counter%-beta" />
-          <param name="patch-global-assembly-info" value="true" />
-        </parameters>
-      </extension>
-    </build-extensions>
+    <build-triggers />
     <cleanup />
   </settings>
 </build-type>
