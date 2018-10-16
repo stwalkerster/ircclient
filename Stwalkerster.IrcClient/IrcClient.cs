@@ -1150,6 +1150,12 @@
             var newNickname = parameters[0];
             var oldNickname = user.Nickname;
 
+            if (this.nickname == oldNickname)
+            {
+                this.logger.InfoFormat("Updating my nickname from {0} to {1}!", oldNickname, newNickname);
+                this.nickname = newNickname;
+            }
+            
             this.logger.InfoFormat("Changing {0} to {1} in nick tracking database.", oldNickname, newNickname);
 
             try

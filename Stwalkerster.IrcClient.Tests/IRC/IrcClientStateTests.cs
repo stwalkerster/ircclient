@@ -141,6 +141,44 @@
         }
 
         [Test]
+        public void TestSelfNickTracking()
+        {
+            // initial client setup
+            this.DoSetup("stwtestbot");
+
+            // shortcut functions for logs
+            Action<string> i = data => this.networkClient.Raise(
+                x => x.DataReceived += null,
+                this.networkClient.Object,
+                new DataReceivedEventArgs(data));
+            Action<string> o = data => this.networkClient.Verify(x => x.Send(data));
+            
+            o("CAP LS");
+            i(":orwell.freenode.net CAP * LS :account-notify extended-join identify-msg multi-prefix sasl");
+            o("CAP REQ :account-notify extended-join multi-prefix");
+            i(":orwell.freenode.net CAP * ACK :account-notify extended-join multi-prefix ");
+            o("CAP END");
+            o("USER username * * :real name");
+            o("NICK stwtestbot");
+            i(":orwell.freenode.net 001 stwtestbot :Welcome to the freenode Internet Relay Chat Network stwtestbot");
+            i(":stwtestbot MODE stwtestbot :+i");
+            o("MODE stwtestbot +Q");
+            i(":stwtestbot MODE stwtestbot :+Q");
+            
+            this.client.JoinChannel("##stwalkerster-development");
+            o("JOIN ##stwalkerster-development");
+            i(":stwtestbot!~stwtestbo@cpc104826-sgyl39-2-0-cust295.18-2.cable.virginm.net JOIN ##stwalkerster-development * :stwtestbot");
+            i(":orwell.freenode.net 353 stwtestbot = ##stwalkerster-development :stwtestbot @ChanServ");
+            i(":orwell.freenode.net 366 stwtestbot ##stwalkerster-development :End of /NAMES list.");
+            
+            Assert.AreEqual("stwtestbot", this.client.Nickname);
+            
+            i(":stwtestbot!~stwtestbo@cpc104826-sgyl39-2-0-cust295.18-2.cable.virginm.net NICK :testytest");
+            
+            Assert.AreEqual("testytest", this.client.Nickname);
+        }
+        
+        [Test]
         public void TestAccountTrackingWithJoiningUsers()
         {
             // initial client setup

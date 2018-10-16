@@ -40,8 +40,17 @@
             {
                 if (!args.IsNotice)
                 {
-                    var message = new Message("PRIVMSG", new[] {"##stwalkerster-development", args.User.ToString()});
+                    var message = new Message(
+                        "PRIVMSG",
+                        new[] {"##stwalkerster-development", args.User.ToString() + " -> " + args.Client.Nickname});
                     args.Client.Send(message);
+                }
+                else
+                {
+                    if (args.Target == "##stwalkerster-development")
+                    {
+                        (args.Client as IrcClient)?.Inject(args.Message);
+                    }
                 }
             };
         }
