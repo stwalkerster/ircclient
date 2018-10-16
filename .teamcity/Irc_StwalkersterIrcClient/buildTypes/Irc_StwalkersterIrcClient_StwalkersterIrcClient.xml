@@ -5,6 +5,7 @@
   <settings ref="Irc_StwalkersterIrcClient_DotNetLibrary">
     <parameters>
       <param name="system.DefineConstants" value="PARSERTESTS" />
+      <param name="version" value="8.1" />
     </parameters>
     <build-runners />
     <vcs-settings>
