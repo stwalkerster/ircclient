@@ -7,7 +7,6 @@
     </options>
     <parameters>
       <param name="system.Configuration" value="Release" />
-      <param name="version" value="8.1" />
     </parameters>
     <build-runners>
       <runner id="RUNNER_14" name="" type="jb.nuget.installer">
