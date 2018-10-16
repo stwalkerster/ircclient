@@ -5,7 +5,9 @@
   <settings ref="Irc_StwalkersterIrcClient_DotNetLibrary">
     <parameters />
     <build-runners />
-    <vcs-settings />
+    <vcs-settings>
+      <vcs-entry-ref root-id="Irc_IRCclient" />
+    </vcs-settings>
     <requirements />
     <build-triggers />
     <cleanup />
