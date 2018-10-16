@@ -6,6 +6,7 @@
       <option name="buildNumberPattern" value="%version%.%build.counter%" />
     </options>
     <parameters>
+      <param name="primaryProjectName"><![CDATA[%solutionName%]]></param>
       <param name="system.Configuration" value="Release" />
       <param name="testProjectName" value="%primaryProjectName%.Tests" />
     </parameters>
