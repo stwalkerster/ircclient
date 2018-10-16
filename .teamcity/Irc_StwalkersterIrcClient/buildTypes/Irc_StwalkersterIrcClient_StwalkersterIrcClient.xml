@@ -7,6 +7,7 @@
     <build-runners />
     <vcs-settings>
       <vcs-entry-ref root-id="Irc_IRCclient" />
+      <vcs-entry-ref root-id="EyeInTheSky_ParserTests" />
     </vcs-settings>
     <requirements />
     <build-triggers />
