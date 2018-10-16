@@ -23,7 +23,7 @@
       </runner>
       <runner id="RUNNER_13" name="Build" type="MSBuild">
         <parameters>
-          <param name="build-file-path" value="IRCLib.sln" />
+          <param name="build-file-path" value="%solutionName%.sln" />
           <param name="dotNetCoverage.NCover.HTMLReport.File.Sort" value="0" />
           <param name="dotNetCoverage.NCover.HTMLReport.File.Type" value="1" />
           <param name="dotNetCoverage.NCover.Reg" value="selected" />
