@@ -3,7 +3,9 @@
   <name>Stwalkerster.IrcClient</name>
   <description />
   <settings ref="Irc_StwalkersterIrcClient_DotNetLibrary">
-    <parameters />
+    <parameters>
+      <param name="system.DefineConstants" value="PARSERTESTS" />
+    </parameters>
     <build-runners />
     <vcs-settings>
       <vcs-entry-ref root-id="Irc_IRCclient" />
