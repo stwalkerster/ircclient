@@ -5,7 +5,7 @@
   <settings ref="DotNetLibrary">
     <parameters>
       <param name="extraParameters" value="/p:DefineConstants=PARSERTESTS" />
-      <param name="primaryProjectName"><![CDATA[Stwalkerster.IrcClient]]></param>
+      <param name="primaryProjectName" value="Stwalkerster.IrcClient" />
       <param name="solutionName" value="IRCLib" />
       <param name="system.DefineConstants" value="PARSERTESTS" />
       <param name="version" value="8.1" />
