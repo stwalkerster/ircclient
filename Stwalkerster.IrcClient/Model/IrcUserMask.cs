@@ -9,11 +9,11 @@
     public class IrcUserMask
     {
         private static readonly Regex NuhMask = new Regex(@"(?:^(?<nick>.+)\!(?<user>.+)@(?<host>.+)$)");
-        
+
         private readonly bool isExtMask, inverted;
         private readonly string nick, user, host, type, parameter;
         private readonly Regex nickRegex, userRegex, hostRegex;
-        
+
         public IrcUserMask(string mask, IIrcClient client)
         {
             var skipExtBans = false;
@@ -54,7 +54,7 @@
                 this.nick = nuhMatch.Groups["nick"].Value;
                 this.user = nuhMatch.Groups["user"].Value;
                 this.host = nuhMatch.Groups["host"].Value;
-                
+
                 this.nickRegex = new Regex(Regex.Escape(this.nick).Replace(@"\?", ".").Replace(@"\*", ".*"));
                 this.userRegex = new Regex(Regex.Escape(this.user).Replace(@"\?", ".").Replace(@"\*", ".*"));
                 this.hostRegex = new Regex(Regex.Escape(this.host).Replace(@"\?", ".").Replace(@"\*", ".*"));
@@ -124,6 +124,49 @@
             }
 
             return string.Format("{0}!{1}@{2}", this.nick, this.user, this.host);
+        }
+
+        protected bool Equals(IrcUserMask other)
+        {
+            return this.inverted == other.inverted && string.Equals(this.nick, other.nick)
+                                                   && string.Equals(this.user, other.user)
+                                                   && string.Equals(this.host, other.host)
+                                                   && string.Equals(this.type, other.type)
+                                                   && string.Equals(this.parameter,other.parameter);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj))
+            {
+                return false;
+            }
+
+            if (ReferenceEquals(this, obj))
+            {
+                return true;
+            }
+
+            if (obj.GetType() != this.GetType())
+            {
+                return false;
+            }
+
+            return Equals((IrcUserMask) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = this.inverted.GetHashCode();
+                hashCode = (hashCode * 397) ^ (this.nick != null ? this.nick.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (this.user != null ? this.user.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (this.host != null ? this.host.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (this.type != null ? this.type.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (this.parameter != null ? this.parameter.GetHashCode() : 0);
+                return hashCode;
+            }
         }
     }
 }
