@@ -9,6 +9,7 @@
       <param name="solutionName" value="IRCLib" />
       <param name="system.DefineConstants" value="PARSERTESTS" />
       <param name="version" value="8.1" />
+      <param name="versiontag" value="" />
     </parameters>
     <build-runners />
     <vcs-settings>
