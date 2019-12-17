@@ -5,12 +5,12 @@
   <settings ref="DotNetLibrary">
     <parameters>
       <param name="extraParameters" value="/p:DefineConstants=PARSERTESTS" />
+      <param name="nunitRunner" value="3.10.0" />
       <param name="primaryProjectName" value="Stwalkerster.IrcClient" />
       <param name="solutionName" value="IRCLib" />
       <param name="system.DefineConstants" value="PARSERTESTS" />
       <param name="version" value="8.1" />
       <param name="versiontag" value="" />
-      <param name="nunitRunner" value="3.10.0" />
     </parameters>
     <build-runners />
     <vcs-settings>
