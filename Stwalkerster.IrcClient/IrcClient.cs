@@ -133,6 +133,8 @@
         /// The nickname.
         /// </summary>
         private string nickname;
+        
+        private string intendedNickname;
 
         /// <summary>
         /// The server prefix.
@@ -150,6 +152,7 @@
         private readonly Thread pingThread;
         private int lagTimer;
         private readonly bool restartOnHeavyLag;
+        private readonly bool reclaimNickFromServices;
 
         #endregion
 
@@ -180,11 +183,13 @@
         public IrcClient(INetworkClient client, ILogger logger, IIrcConfiguration configuration, ISupportHelper supportHelper)
         {
             this.nickname = configuration.Nickname;
+            this.intendedNickname = configuration.Nickname;
             this.username = configuration.Username;
             this.realName = configuration.RealName;
             this.password = configuration.Password;
             this.authToServices = configuration.AuthToServices;
             this.restartOnHeavyLag = configuration.RestartOnHeavyLag;
+            this.reclaimNickFromServices = configuration.ReclaimNickFromServices;
 
             this.supportHelper = supportHelper;
             this.ClientName = configuration.ClientName;
@@ -289,6 +294,7 @@
             set
             {
                 this.nickname = value;
+                this.intendedNickname = value;
                 this.Send(new Message("NICK", value));
             }
         }
@@ -1444,7 +1450,8 @@
             if ((message.Command == Numerics.NicknameInUse) || (message.Command == Numerics.UnavailableResource))
             {
                 this.logger.Warn("Nickname in use, retrying.");
-                this.Nickname = this.Nickname + "_";
+                this.nickname = this.nickname + "_";
+                this.Send(new Message("NICK", this.nickname));
                 return;
             }
 
@@ -1591,31 +1598,51 @@
             {
                 timerWait.WaitOne(TimeSpan.FromSeconds(this.PingInterval));
 
-                var totalSeconds = (int)DateTime.UtcNow.Subtract(new DateTime(1970,1,1,0,0,0,0)).TotalSeconds;
-                this.expectedPingMessage = string.Format("GNU Terry Pratchett {0}", totalSeconds);
-
-                this.networkClient.PrioritySend(string.Format("PING :{0}", this.expectedPingMessage));
-                var result = this.pingReplyEvent.WaitOne(TimeSpan.FromSeconds(this.PingTimeout));
-
-                if (!result)
-                {
-                    this.logger.Warn("Ping reply not received!");
-                    this.lagTimer++;
-
-                    if (this.lagTimer >= 3)
-                    {
-                        this.networkClient.PrioritySend("QUIT :Unexpected heavy lag, restarting...");
-                        this.Disconnect("Heavy lag, three ping replies not recieved.");
-                    }
-                }
-                else
-                {
-                    this.lagTimer = 0;
-                    
-                }
+                this.PingThreadHandlePing();
+                this.PingThreadHandleNickChange();
             }
         }
 
+        private void PingThreadHandlePing()
+        {
+            var totalSeconds = (int) DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1, 0, 0, 0, 0)).TotalSeconds;
+            this.expectedPingMessage = string.Format("GNU Terry Pratchett {0}", totalSeconds);
+
+            this.networkClient.PrioritySend(string.Format("PING :{0}", this.expectedPingMessage));
+            var result = this.pingReplyEvent.WaitOne(TimeSpan.FromSeconds(this.PingTimeout));
+
+            if (!result)
+            {
+                this.logger.Warn("Ping reply not received!");
+                this.lagTimer++;
+
+                if (this.lagTimer >= 3)
+                {
+                    this.networkClient.PrioritySend("QUIT :Unexpected heavy lag, restarting...");
+                    this.Disconnect("Heavy lag, three ping replies not recieved.");
+                }
+            }
+            else
+            {
+                this.lagTimer = 0;
+            }
+        }
+
+        private void PingThreadHandleNickChange()
+        {
+            if (this.intendedNickname != this.nickname)
+            {
+                if (this.servicesLoggedIn)
+                {
+                    this.SendMessage("NickServ", $"REGAIN {this.intendedNickname}");
+                }
+                else
+                {
+                    this.Send(new Message("NICK", this.intendedNickname));
+                }
+            }
+        }
+        
         /// <summary>
         /// The SASL authentication.
         /// </summary>

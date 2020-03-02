@@ -58,6 +58,8 @@
         /// </summary>
         bool RestartOnHeavyLag { get; }
         
+        bool ReclaimNickFromServices { get; }
+        
         #endregion
     }
 }

@@ -15,7 +15,8 @@
             bool ssl,
             string clientName,
             string password = null,
-            bool restartOnHeavyLag = true
+            bool restartOnHeavyLag = true,
+            bool reclaimNickFromService = true
             )
         {
             if (hostname == null)
@@ -63,6 +64,7 @@
             this.Ssl = ssl;
             this.ClientName = clientName;
             this.RestartOnHeavyLag = restartOnHeavyLag;
+            this.ReclaimNickFromServices = reclaimNickFromService;
         }
 
         public bool AuthToServices { get; private set; }
@@ -75,5 +77,6 @@
         public bool Ssl { get; private set; }
         public string ClientName { get; private set; }
         public bool RestartOnHeavyLag { get; private set; }
+        public bool ReclaimNickFromServices { get; private set; }
     }
 }
