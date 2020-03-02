@@ -456,6 +456,8 @@
         /// </param>
         public void SendMessage(string destination, string message, DestinationFlags destinationFlag)
         {
+            this.WaitOnRegistration();
+            
             if (destinationFlag != null && !this.destinationFlags.Contains(destinationFlag.Flag))
             {
                 throw new OperationNotSupportedException("Message send requested with destination flag, but destination flag is not supported by this server.");
@@ -475,6 +477,8 @@
         /// </param>
         public void SendMessage(string destination, string message)
         {
+            this.WaitOnRegistration();
+            
             this.SendMessage(destination, message, null);
         }
 
