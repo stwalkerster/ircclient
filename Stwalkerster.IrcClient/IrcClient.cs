@@ -697,7 +697,7 @@
                     var pingMessage = message.Parameters.Last().Substring(PingPrefix.Length);
                     if (double.TryParse(pingMessage, out var beginTime))
                     {
-                        PingDuration.Set((endTime - beginTime) / 1000);
+                        PingDuration.WithLabels(this.ClientName).Set((endTime - beginTime) / 1000);
                     }
                     
                     this.pingReplyEvent.Set();
