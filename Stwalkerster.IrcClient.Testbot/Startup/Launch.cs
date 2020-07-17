@@ -4,6 +4,7 @@
     using Castle.MicroKernel.Registration;
     using Castle.Windsor;
     using Castle.Windsor.Installer;
+    using Prometheus;
     using Stwalkerster.IrcClient.Interfaces;
     using Stwalkerster.IrcClient.Messages;
 
@@ -11,6 +12,9 @@
     {
         public static void Main()
         {
+            var server = new MetricServer(hostname: "localhost", port: 9101);
+            server.Start();
+            
             var container = new WindsorContainer();
 
             container.Register(

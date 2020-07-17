@@ -6,6 +6,7 @@
     using System.Net.Sockets;
     using System.Threading;
     using Castle.Core.Logging;
+    using Prometheus;
     using Stwalkerster.IrcClient.Events;
     using Stwalkerster.IrcClient.Interfaces;
 
@@ -17,6 +18,26 @@
     /// </para>
     public class NetworkClient : INetworkClient
     {
+        private static readonly Counter MessagesReceived = Metrics.CreateCounter(
+            "ircclient_network_messages_received_total",
+            "Number of messages received",
+            new CounterConfiguration {LabelNames = new[] {"endpoint"}});
+        
+        private static readonly Counter MessagesSent = Metrics.CreateCounter(
+            "ircclient_network_messages_sent_total",
+            "Number of messages sent",
+            new CounterConfiguration {LabelNames = new[] {"endpoint"}});
+        
+        private static readonly Counter MessageBytesReceived = Metrics.CreateCounter(
+            "ircclient_network_messages_received_bytes_total",
+            "Number of messages received",
+            new CounterConfiguration {LabelNames = new[] {"endpoint"}});
+        
+        private static readonly Counter MessageBytesSent = Metrics.CreateCounter(
+            "ircclient_network_messages_sent_bytes_total",
+            "Number of messages sent",
+            new CounterConfiguration {LabelNames = new[] {"endpoint"}});
+        
         /// <inheritdoc />
         public event EventHandler<DataReceivedEventArgs> DataReceived;
         public event EventHandler<EventArgs> Disconnected;
@@ -64,7 +85,7 @@
 
             this.writerThreadResetEvent = new AutoResetEvent(true);
         }
-
+        
         protected TcpClient Client
         {
             get { return this.client; }
@@ -214,6 +235,10 @@
                     if (data != null)
                     {
                         this.inboundLogger.Debug(data);
+                        
+                        MessagesReceived.WithLabels($"{Hostname}:{Port}").Inc();
+                        MessageBytesReceived.WithLabels($"{Hostname}:{Port}").Inc(data.Length);
+                        
                         this.OnDataReceived(new DataReceivedEventArgs(data));
                     }
                 }
@@ -270,6 +295,10 @@
                         }
 
                         this.outboundLogger.Debug(item);
+                        
+                        MessagesSent.WithLabels($"{Hostname}:{Port}").Inc();
+                        MessageBytesSent.WithLabels($"{Hostname}:{Port}").Inc(item.Length);
+                        
                         this.Writer.WriteLine(item);
                         this.Writer.Flush();
 

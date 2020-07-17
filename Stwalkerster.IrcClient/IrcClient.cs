@@ -9,6 +9,7 @@
     using System.Threading;
 
     using Castle.Core.Logging;
+    using Prometheus;
     using Stwalkerster.IrcClient.Events;
     using Stwalkerster.IrcClient.Exceptions;
     using Stwalkerster.IrcClient.Interfaces;
@@ -22,6 +23,49 @@
     /// </summary>
     public class IrcClient : IIrcClient, IDisposable
     {
+        private const string PingPrefix = "GNU Terry Pratchett ";
+
+        private static readonly Counter PrivateMessagesReceived = Metrics.CreateCounter(
+            "ircclient_privmsg_received_total",
+            "Number of PRIVMSG messages received",
+            new CounterConfiguration
+            {
+                LabelNames = new[] {"client"}
+            });
+
+        private static readonly Gauge ChannelsJoined = Metrics.CreateGauge(
+            "ircclient_channels_joined",
+            "Current number of channels joined",
+            new GaugeConfiguration
+            {
+                LabelNames = new[] {"client"}
+            });     
+        
+        private static readonly Gauge UsersKnown = Metrics.CreateGauge(
+            "ircclient_users_known",
+            "Current number of users known",
+            new GaugeConfiguration
+            {
+                LabelNames = new[] {"client"}
+            });
+
+        private static readonly Gauge PingDuration = Metrics.CreateGauge(
+            "ircclient_ping_duration_seconds",
+            "Current ping duration to the server",
+            new GaugeConfiguration
+            {
+                SuppressInitialValue = true,
+                LabelNames = new[] {"client"}
+            });
+        
+        private static readonly Counter PingsMissed = Metrics.CreateCounter(
+            "ircclient_pings_missed_total",
+            "Current ping duration to the server",
+            new CounterConfiguration
+            {
+                LabelNames = new[] {"client"}
+            });
+        
         /// <summary>
         /// The mode mapping.
         /// </summary>
@@ -581,6 +625,7 @@
                         ircUser.Nickname = nick;
                         ircUser.SkeletonStatus = IrcUserSkeletonStatus.NickOnly;
                         this.userCache.Add(nick, ircUser);
+                        UsersKnown.WithLabels(this.ClientName).Set(this.userCache.Count);
                     }
 
                     ircUser.Account = account;
@@ -648,6 +693,13 @@
             {
                 if (message.Parameters.Contains(this.expectedPingMessage))
                 {
+                    var endTime = DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1, 0, 0, 0, 0)).TotalMilliseconds;
+                    var pingMessage = message.Parameters.Last().Substring(PingPrefix.Length);
+                    if (double.TryParse(pingMessage, out var beginTime))
+                    {
+                        PingDuration.Set((endTime - beginTime) / 1000);
+                    }
+                    
                     this.pingReplyEvent.Set();
                 }
             }
@@ -725,6 +777,7 @@
                 else
                 {
                     this.userCache.Add(user.Nickname, (IrcUser) user);
+                    UsersKnown.WithLabels(this.ClientName).Set(this.userCache.Count);
                     user.Account = parameters[0];
                 }
             }
@@ -820,6 +873,7 @@
                 else
                 {
                     this.userCache.Add(user.Nickname, user);
+                    UsersKnown.WithLabels(this.ClientName).Set(this.userCache.Count);
                 }
             }
 
@@ -849,6 +903,7 @@
                     // add the channel to the list of channels I'm in.
                     this.logger.DebugFormat("Adding {0} to the list of channels I'm in.", channelName);
                     this.Channels.Add(channelName, new IrcChannel(channelName));
+                    ChannelsJoined.WithLabels(this.ClientName).Set(this.channels.Count);
                 }
             }
             else
@@ -935,7 +990,8 @@
                         e.Message.Command == "NOTICE",
                         e.Client
                     );
-                
+                    
+                    PrivateMessagesReceived.WithLabels(this.ClientName).Inc();
                     messageReceivedEvent(this, newEvent);
                 }
             }
@@ -952,7 +1008,7 @@
 
             if (e.Message.Command == Numerics.ISupport)
             {
-                this.OnISupportMessageRecieved(e);
+                this.OnISupportMessageReceived(e);
             }
 
             if (e.Message.Command == Numerics.WhoXReply)
@@ -1046,7 +1102,7 @@
         /// </remarks>
         /// <param name="e"></param>
         [SuppressMessage("ReSharper", "UnusedVariable")]
-        private void OnISupportMessageRecieved(IrcMessageReceivedEventArgs e)
+        private void OnISupportMessageReceived(IrcMessageReceivedEventArgs e)
         {
             // User modes in channels
             var prefixMessage = e.Message.Parameters.FirstOrDefault(x => x.StartsWith("PREFIX="));
@@ -1135,6 +1191,7 @@
                         else
                         {
                             this.userCache.Add(parsedName, ircUser);
+                            UsersKnown.WithLabels(this.ClientName).Set(this.userCache.Count);
                         }
 
                         var channelUser = new IrcChannelUser(ircUser, channel) { Voice = voice, Operator = op };
@@ -1188,6 +1245,8 @@
                     {
                         this.userCache.Remove(oldNickname);
                         this.userCache.Add(newNickname, ircUser);
+                        
+                        UsersKnown.WithLabels(this.ClientName).Set(this.userCache.Count);
                     }
                     catch (ArgumentException)
                     {
@@ -1270,8 +1329,10 @@
 
                         this.userCache.Remove(u);
                     }
-
+                    
+                    UsersKnown.WithLabels(this.ClientName).Set(this.userCache.Count);
                     this.channels.Remove(channel);
+                    ChannelsJoined.WithLabels(this.ClientName).Set(this.channels.Count);
                 }
             }
             else
@@ -1290,6 +1351,8 @@
                             channel);
 
                         this.userCache.Remove(user.Nickname);
+                        
+                        UsersKnown.WithLabels(this.ClientName).Set(this.userCache.Count);
                     }
                 }
             }
@@ -1330,9 +1393,12 @@
 
                         this.userCache.Remove(u);
                     }
+                    
+                    UsersKnown.WithLabels(this.ClientName).Set(this.userCache.Count);
 
                     this.logger.DebugFormat("Removing {0} from channel list", channel);
                     this.channels.Remove(channel);
+                    ChannelsJoined.WithLabels(this.ClientName).Set(this.channels.Count);
                 }
 
                 this.OnBotKickedEvent(new KickedEventArgs(channel));
@@ -1353,6 +1419,7 @@
                             channel);
 
                         this.userCache.Remove(parameters[1]);
+                        UsersKnown.WithLabels(this.ClientName).Set(this.userCache.Count);
                     }
                 }
             }
@@ -1376,6 +1443,8 @@
                 {
                     channel.Value.Users.Remove(user.Nickname);
                 }
+                
+                UsersKnown.WithLabels(this.ClientName).Set(this.userCache.Count);
             }
         }
 
@@ -1434,10 +1503,7 @@
                 this.logger.Info("Connection registration succeeded");
                 this.serverPrefix = message.Prefix;
 
-                if (this.restartOnHeavyLag)
-                {
-                    this.pingThread.Start();
-                }
+                this.pingThread.Start();
 
                 // block forwarding
                 this.Send(new Message("MODE", new[] {this.Nickname, "+Q"}));
@@ -1609,8 +1675,8 @@
 
         private void PingThreadHandlePing()
         {
-            var totalSeconds = (int) DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1, 0, 0, 0, 0)).TotalSeconds;
-            this.expectedPingMessage = string.Format("GNU Terry Pratchett {0}", totalSeconds);
+            var totalMilliseconds = DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1, 0, 0, 0, 0)).TotalMilliseconds;
+            this.expectedPingMessage = string.Format("{1}{0}", totalMilliseconds, PingPrefix);
 
             this.networkClient.PrioritySend(string.Format("PING :{0}", this.expectedPingMessage));
             var result = this.pingReplyEvent.WaitOne(TimeSpan.FromSeconds(this.PingTimeout));
@@ -1619,8 +1685,9 @@
             {
                 this.logger.Warn("Ping reply not received!");
                 this.lagTimer++;
+                PingsMissed.WithLabels(this.ClientName).Inc();
 
-                if (this.lagTimer >= 3)
+                if (this.lagTimer >= 3 && this.restartOnHeavyLag)
                 {
                     this.networkClient.PrioritySend("QUIT :Unexpected heavy lag, restarting...");
                     this.Disconnect("Heavy lag, three ping replies not recieved.");
