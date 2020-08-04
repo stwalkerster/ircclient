@@ -37,6 +37,11 @@
             "ircclient_network_messages_sent_bytes_total",
             "Number of messages sent",
             new CounterConfiguration {LabelNames = new[] {"endpoint"}});
+
+        private static readonly Gauge SendQueueLength = Metrics.CreateGauge(
+            "ircclient_network_sendqueue_length",
+            "Number of messages in the send queue",
+            new GaugeConfiguration {LabelNames = new[] {"endpoint"}});
         
         /// <inheritdoc />
         public event EventHandler<DataReceivedEventArgs> DataReceived;
@@ -167,6 +172,7 @@
             lock (this.sendQueueLock)
             {
                 this.sendQueue.AddLast(message);
+                SendQueueLength.WithLabels($"{Hostname}:{Port}").Set(this.sendQueue.Count);
             }
 
             this.writerThreadResetEvent.Set();
@@ -178,6 +184,7 @@
             lock (this.sendQueueLock)
             {
                 this.sendQueue.AddFirst(message);
+                SendQueueLength.WithLabels($"{Hostname}:{Port}").Set(this.sendQueue.Count);
             }
 
             this.writerThreadResetEvent.Set();
@@ -192,6 +199,8 @@
                 {
                     this.sendQueue.AddLast(message);
                 }
+                
+                SendQueueLength.WithLabels($"{Hostname}:{Port}").Set(this.sendQueue.Count);
             }
 
             this.writerThreadResetEvent.Set();
@@ -280,6 +289,8 @@
                             item = this.sendQueue.First.Value;
                             this.sendQueue.RemoveFirst();
                         }
+                        
+                        SendQueueLength.WithLabels($"{Hostname}:{Port}").Set(this.sendQueue.Count);
                     }
 
                     if (item == null)

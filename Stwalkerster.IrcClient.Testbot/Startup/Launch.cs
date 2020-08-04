@@ -12,7 +12,7 @@
     {
         public static void Main()
         {
-            var server = new MetricServer(hostname: "localhost", port: 9101);
+            var server = new MetricServer(9101);
             server.Start();
             
             var container = new WindsorContainer();

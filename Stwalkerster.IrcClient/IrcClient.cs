@@ -48,7 +48,23 @@
             {
                 LabelNames = new[] {"client"}
             });
+        
+        private static readonly Gauge MyStatusFlags = Metrics.CreateGauge(
+            "ircclient_my_statusflags",
+            "The number of status flags I currently hold",
+            new GaugeConfiguration
+            {
+                LabelNames = new[] {"client", "flag"}
+            });
 
+        private static readonly Gauge ChannelUsers = Metrics.CreateGauge(
+            "ircclient_channel_users",
+            "The number of users in a channel",
+            new GaugeConfiguration
+            {
+                LabelNames = new[] {"client", "channel"}
+            });
+        
         private static readonly Gauge PingDuration = Metrics.CreateGauge(
             "ircclient_ping_duration_seconds",
             "Current ping duration to the server",
@@ -649,6 +665,7 @@
                         };
 
                         this.channels[channel].Users.Add(ircUser.Nickname, channelUser);
+                        ChannelUsers.WithLabels(this.ClientName, channel).Set(this.channels[channel].Users.Count);
                     }
                 }
             }
@@ -826,11 +843,22 @@
                     }
                 }
 
+                // ReSharper disable once StringLiteralTypo
                 if ("eIbqkflj".Contains(c))
                 {
                     position++;
                 }
             }
+            
+            this.SyncStatusFlagsMetrics();
+        }
+
+        private void SyncStatusFlagsMetrics()
+        {
+            MyStatusFlags.WithLabels(this.ClientName, "v")
+                .Set(this.channels.Aggregate(0, (t, c) => t + (c.Value.Users[this.nickname].Voice ? 1 : 0)));
+            MyStatusFlags.WithLabels(this.ClientName, "o")
+                .Set(this.channels.Aggregate(0, (t, c) => t + (c.Value.Users[this.nickname].Operator ? 1 : 0)));
         }
 
         /// <summary>
@@ -919,6 +947,7 @@
                             .Users.Add(
                                 user.Nickname,
                                 new IrcChannelUser(user, channelName));
+                        ChannelUsers.WithLabels(this.ClientName, channelName).Set(this.channels[channelName].Users.Count);
                     }
                     else
                     {
@@ -1197,6 +1226,7 @@
                         var channelUser = new IrcChannelUser(ircUser, channel) { Voice = voice, Operator = op };
 
                         this.channels[channel].Users.Add(parsedName, channelUser);
+                        ChannelUsers.WithLabels(this.ClientName, channel).Set(this.channels[channel].Users.Count);
                     }
                 }
             }
@@ -1330,9 +1360,12 @@
                         this.userCache.Remove(u);
                     }
                     
+                    ChannelUsers.WithLabels(this.ClientName, channel).Unpublish();
                     UsersKnown.WithLabels(this.ClientName).Set(this.userCache.Count);
                     this.channels.Remove(channel);
                     ChannelsJoined.WithLabels(this.ClientName).Set(this.channels.Count);
+                    
+                    this.SyncStatusFlagsMetrics();
                 }
             }
             else
@@ -1354,6 +1387,8 @@
                         
                         UsersKnown.WithLabels(this.ClientName).Set(this.userCache.Count);
                     }
+                    
+                    ChannelUsers.WithLabels(this.ClientName, channel).Set(this.channels[channel].Users.Count);
                 }
             }
 
@@ -1399,6 +1434,9 @@
                     this.logger.DebugFormat("Removing {0} from channel list", channel);
                     this.channels.Remove(channel);
                     ChannelsJoined.WithLabels(this.ClientName).Set(this.channels.Count);
+                    ChannelUsers.WithLabels(this.ClientName, channel).Unpublish();
+                    
+                    this.SyncStatusFlagsMetrics();
                 }
 
                 this.OnBotKickedEvent(new KickedEventArgs(channel));
@@ -1421,6 +1459,8 @@
                         this.userCache.Remove(parameters[1]);
                         UsersKnown.WithLabels(this.ClientName).Set(this.userCache.Count);
                     }
+                    
+                    ChannelUsers.WithLabels(this.ClientName, channel).Set(this.channels[channel].Users.Count);
                 }
             }
         }
@@ -1442,6 +1482,7 @@
                 foreach (var channel in this.channels)
                 {
                     channel.Value.Users.Remove(user.Nickname);
+                    ChannelUsers.WithLabels(this.ClientName, channel.Key).Set(channel.Value.Users.Count);
                 }
                 
                 UsersKnown.WithLabels(this.ClientName).Set(this.userCache.Count);
