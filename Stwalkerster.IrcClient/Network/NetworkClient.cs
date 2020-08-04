@@ -251,6 +251,8 @@
                         this.OnDataReceived(new DataReceivedEventArgs(data));
                     }
                 }
+                
+                this.Logger.Debug("Reader thread no longer connected");    
             }
             catch (IOException ex)
             {
@@ -264,11 +266,17 @@
             {
                 this.Logger.Fatal("Object disposed", ex);
             }
+            catch (Exception ex)
+            {
+                this.Logger.Warn("Unhandled reader thread exception", ex);
+                throw;
+            }
             finally
             {
                 this.writerThread.Abort();
                 this.client.Close();
 
+                this.Logger.Debug("Firing disconnect event from reader thread!");    
                 this.FireDisconnectedEvent();
             }
         }
@@ -289,7 +297,7 @@
                             item = this.sendQueue.First.Value;
                             this.sendQueue.RemoveFirst();
                         }
-                        
+
                         SendQueueLength.WithLabels($"{Hostname}:{Port}").Set(this.sendQueue.Count);
                     }
 
@@ -306,10 +314,10 @@
                         }
 
                         this.outboundLogger.Debug(item);
-                        
+
                         MessagesSent.WithLabels($"{Hostname}:{Port}").Inc();
                         MessageBytesSent.WithLabels($"{Hostname}:{Port}").Inc(item.Length);
-                        
+
                         this.Writer.WriteLine(item);
                         this.Writer.Flush();
 
@@ -317,6 +325,8 @@
                         Thread.Sleep(500);
                     }
                 }
+
+                this.Logger.Debug("Writer thread no longer connected");
             }
             catch (IOException ex)
             {
@@ -330,17 +340,23 @@
             {
                 this.Logger.Fatal("Object disposed", ex);
             }
+            catch (Exception ex)
+            {
+                this.Logger.Warn("Unhandled writer thread exception", ex);
+                throw;
+            }
             finally
             {            
                 this.readerThread.Abort();
                 this.client.Close();
 
+                this.Logger.Debug("Firing disconnect event from writer thread!");    
                 this.FireDisconnectedEvent();
             }
         }
 
         private void FireDisconnectedEvent()
-        {
+        {   
             var fireDisconnected = false;
             
             lock (this.disconnectedLock)
