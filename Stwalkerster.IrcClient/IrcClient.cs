@@ -855,10 +855,17 @@
 
         private void SyncStatusFlagsMetrics()
         {
-            MyStatusFlags.WithLabels(this.ClientName, "v")
-                .Set(this.channels.Aggregate(0, (t, c) => t + (c.Value.Users[this.nickname].Voice ? 1 : 0)));
-            MyStatusFlags.WithLabels(this.ClientName, "o")
-                .Set(this.channels.Aggregate(0, (t, c) => t + (c.Value.Users[this.nickname].Operator ? 1 : 0)));
+            try
+            {
+                MyStatusFlags.WithLabels(this.ClientName, "v")
+                    .Set(this.channels.Aggregate(0, (t, c) => t + (c.Value.Users[this.nickname].Voice ? 1 : 0)));
+                MyStatusFlags.WithLabels(this.ClientName, "o")
+                    .Set(this.channels.Aggregate(0, (t, c) => t + (c.Value.Users[this.nickname].Operator ? 1 : 0)));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                this.logger.Debug("Unable to update metrics due to missing username in channel info - are we joining an empty channel?");
+            }
         }
 
         /// <summary>

@@ -268,7 +268,7 @@
             }
             catch (Exception ex)
             {
-                this.Logger.Warn("Unhandled reader thread exception", ex);
+                this.Logger.Error("Unhandled reader thread exception", ex);
                 throw;
             }
             finally
@@ -342,7 +342,7 @@
             }
             catch (Exception ex)
             {
-                this.Logger.Warn("Unhandled writer thread exception", ex);
+                this.Logger.Error("Unhandled writer thread exception", ex);
                 throw;
             }
             finally
