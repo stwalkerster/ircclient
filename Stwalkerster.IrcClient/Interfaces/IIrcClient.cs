@@ -52,6 +52,14 @@
         /// Raised when the client disconnects from IRC.
         /// </summary>
         event EventHandler DisconnectedEvent;
+        
+        event EventHandler<QuitEventArgs> QuitReceivedEvent;
+        
+        /// <summary>
+        /// Raised when another user was kicked from a channel
+        /// </summary>
+        event EventHandler<KickEventArgs> KickReceivedEvent;
+        event EventHandler<NickEventArgs> NickReceivedEvent;
 
         #endregion
 

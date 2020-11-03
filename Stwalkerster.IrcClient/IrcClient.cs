@@ -307,6 +307,8 @@
         public event EventHandler<JoinEventArgs> JoinReceivedEvent;
 
         public event EventHandler<JoinEventArgs> PartReceivedEvent;
+        public event EventHandler<QuitEventArgs> QuitReceivedEvent;
+        public event EventHandler<KickEventArgs> KickReceivedEvent;
 
         /// <summary>
         /// The received message.
@@ -317,7 +319,9 @@
 
         public event EventHandler<KickedEventArgs> WasKickedEvent;
 
-        public event EventHandler<ModeEventArgs> ModeReceivedEvent;    
+        public event EventHandler<ModeEventArgs> ModeReceivedEvent;
+
+        public event EventHandler<NickEventArgs> NickReceivedEvent; 
 
         /// <summary>
         /// Raised when the client disconnects from IRC.
@@ -864,7 +868,7 @@
             }
             catch (KeyNotFoundException ex)
             {
-                this.logger.Debug("Unable to update metrics due to missing username in channel info - are we joining an empty channel?");
+                this.logger.Debug("Unable to update metrics due to missing username in channel info - are we joining an empty channel?", ex);
             }
         }
 
@@ -1060,7 +1064,7 @@
 
             if ((e.Message.Command == "QUIT") && (user != null))
             {
-                this.OnQuitMessageReceived(user);
+                this.OnQuitMessageReceived(e, user);
             }
 
             if ((e.Message.Command == "MODE") && (user != null))
@@ -1105,7 +1109,7 @@
 
             if (e.Message.Command == "KICK")
             {
-                this.OnKickMessageReceived(e);
+                this.OnKickMessageReceived(e, user);
             }
 
             if ((e.Message.Command == "ACCOUNT") && (user != null))
@@ -1335,6 +1339,12 @@
                 this.logger.Error("Nickname tracking is no longer valid.", exception);
                 this.nickTrackingValid = false;
             }
+
+            var nickEvent = this.NickReceivedEvent;
+            if (nickEvent != null)
+            {
+                nickEvent(this, new NickEventArgs(e.Message, user, oldNickname, this));
+            }
         }
 
         /// <summary>
@@ -1410,9 +1420,10 @@
         /// The on kick message received.
         /// </summary>
         /// <param name="e">
-        /// The e.
+        ///     The e.
         /// </param>
-        private void OnKickMessageReceived(IrcMessageReceivedEventArgs e)
+        /// <param name="user"></param>
+        private void OnKickMessageReceived(IrcMessageReceivedEventArgs e, IUser user)
         {
             // Kick format is:
             // :n!u@h KICK #chan nick :reason
@@ -1469,6 +1480,12 @@
                     
                     ChannelUsers.WithLabels(this.ClientName, channel).Set(this.channels[channel].Users.Count);
                 }
+                
+                var onKickReceivedEvent = this.KickReceivedEvent;
+                if (onKickReceivedEvent != null)
+                {
+                    onKickReceivedEvent(this, new KickEventArgs(e.Message, user, channel, parameters[1], this));
+                }
             }
         }
 
@@ -1478,7 +1495,7 @@
         /// <param name="user">
         /// The user.
         /// </param>
-        private void OnQuitMessageReceived(IUser user)
+        private void OnQuitMessageReceived(IrcMessageReceivedEventArgs e, IUser user)
         {
             this.logger.InfoFormat("{0} has left IRC.", user);
 
@@ -1493,6 +1510,12 @@
                 }
                 
                 UsersKnown.WithLabels(this.ClientName).Set(this.userCache.Count);
+            }
+            
+            var onQuitReceivedEvent = this.QuitReceivedEvent;
+            if (onQuitReceivedEvent != null)
+            {
+                onQuitReceivedEvent(this, new QuitEventArgs(e.Message, user, this));
             }
         }
 

@@ -62,8 +62,11 @@
     <Compile Include="Events\JoinEventArgs.cs" />
     <Compile Include="Events\KickedEventArgs.cs" />
     <Compile Include="Events\IrcMessageReceivedEventArgs.cs" />
+    <Compile Include="Events\KickEventArgs.cs" />
     <Compile Include="Events\MessageReceivedEventArgs.cs" />
     <Compile Include="Events\ModeEventArgs.cs" />
+    <Compile Include="Events\NickEventArgs.cs" />
+    <Compile Include="Events\QuitEventArgs.cs" />
     <Compile Include="Events\UserEventArgsBase.cs" />
     <Compile Include="Exceptions\OperationNotSupportedException.cs" />
     <Compile Include="Extensions\CtcpExtensions.cs" />
