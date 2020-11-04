@@ -7,13 +7,13 @@
     public class KickEventArgs : UserEventArgsBase
     {
         public string Channel { get; }
-        public string KickedNickname { get; }
+        public IUser KickedUser { get; }
 
-        public KickEventArgs(IMessage message, IUser user, string channel, string kickedNickname, IIrcClient client)
+        public KickEventArgs(IMessage message, IUser user, string channel, IUser kickedUser, IIrcClient client)
             : base(message, user, client)
         {
             this.Channel = channel;
-            this.KickedNickname = kickedNickname;
+            this.KickedUser = kickedUser;
         }
     }
 }

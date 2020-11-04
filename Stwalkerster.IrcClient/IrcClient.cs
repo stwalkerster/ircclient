@@ -1461,6 +1461,8 @@
             }
             else
             {
+                var cachedUser = this.userCache[parameters[1]];
+                
                 lock (this.userOperationLock)
                 {
                     this.channels[channel].Users.Remove(parameters[1]);
@@ -1484,7 +1486,7 @@
                 var onKickReceivedEvent = this.KickReceivedEvent;
                 if (onKickReceivedEvent != null)
                 {
-                    onKickReceivedEvent(this, new KickEventArgs(e.Message, user, channel, parameters[1], this));
+                    onKickReceivedEvent(this, new KickEventArgs(e.Message, user, channel, cachedUser, this));
                 }
             }
         }
