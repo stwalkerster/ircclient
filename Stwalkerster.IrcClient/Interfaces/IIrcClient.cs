@@ -181,5 +181,7 @@
 
         #endregion
 
+        event EventHandler<ChannelUserModeEventArgs> ChannelUserModeEvent;
+        event EventHandler<EndOfWhoEventArgs> EndOfWhoEvent;
     }
 }

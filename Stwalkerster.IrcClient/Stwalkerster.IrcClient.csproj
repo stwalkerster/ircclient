@@ -57,7 +57,9 @@
     <Reference Include="System.Web" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Events\ChannelUserModeEventArgs.cs" />
     <Compile Include="Events\DataReceivedEventArgs.cs" />
+    <Compile Include="Events\EndOfWhoEventArgs.cs" />
     <Compile Include="Events\InviteEventArgs.cs" />
     <Compile Include="Events\JoinEventArgs.cs" />
     <Compile Include="Events\KickedEventArgs.cs" />

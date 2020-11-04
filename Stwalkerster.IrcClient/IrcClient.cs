@@ -321,7 +321,11 @@
 
         public event EventHandler<ModeEventArgs> ModeReceivedEvent;
 
-        public event EventHandler<NickEventArgs> NickReceivedEvent; 
+        public event EventHandler<NickEventArgs> NickReceivedEvent;
+
+        public event EventHandler<ChannelUserModeEventArgs> ChannelUserModeEvent;
+
+        public event EventHandler<EndOfWhoEventArgs> EndOfWhoEvent;
 
         /// <summary>
         /// Raised when the client disconnects from IRC.
@@ -680,6 +684,21 @@
                 throw;
             }
         }
+        
+        private void HandleEndOfWhoXReply(IMessage message)
+        {
+            // nick, channel, comment
+            var messageParameters = message.Parameters.ToList();
+            var channel = messageParameters[1];
+            
+            this.logger.Debug($"End of /WHOX for {channel}");
+            
+            var whoEvent = this.EndOfWhoEvent;
+            if (whoEvent != null)
+            {
+                whoEvent(this, new EndOfWhoEventArgs(message, channel, this));
+            }
+        }
 
         private void NetworkClientDisconnected(object sender, EventArgs e)
         {
@@ -804,13 +823,7 @@
             }
         }
 
-        /// <summary>
-        /// The on channel mode received.
-        /// </summary>
-        /// <param name="parameters">
-        /// The parameters.
-        /// </param>
-        private void OnChannelModeReceived(List<string> parameters)
+        private void OnChannelModeReceived(List<string> parameters, IUser actingUser)
         {
             // Channel Mode message
             var channel = parameters[0];
@@ -835,15 +848,23 @@
                 {
                     var nick = parameters[position];
 
+                    IrcChannelUser channelUser;
                     lock (this.userOperationLock)
                     {
-                        var channelUser = this.channels[channel].Users[nick];
+                        channelUser = this.channels[channel].Users[nick];
 
-                        this.logger.InfoFormat("Seen {0}{2} on {1}.", addMode ? "+" : "-", channelUser, c);
+                        this.logger.InfoFormat("Seen {0}{2} on {1} by {3}.", addMode ? "+" : "-", channelUser, c, actingUser);
 
                         this.modeMapping[c.ToString()](channelUser, addMode);
+                        
 
                         position++;
+                    }
+
+                    var channelUserModeEvent = this.ChannelUserModeEvent;
+                    if (channelUserModeEvent != null)
+                    {
+                        channelUserModeEvent(this, new ChannelUserModeEventArgs(channelUser.User, channel, c.ToString(), addMode, actingUser, this));
                     }
                 }
 
@@ -1059,7 +1080,7 @@
 
             if (e.Message.Command == Numerics.EndOfWho)
             {
-                this.logger.Debug("End of who list.");
+                this.HandleEndOfWhoXReply(e.Message);
             }
 
             if ((e.Message.Command == "QUIT") && (user != null))
@@ -1074,7 +1095,7 @@
                 if (target.StartsWith("#"))
                 {
                     this.logger.Debug("Received channel mode message");
-                    this.OnChannelModeReceived(parameters);
+                    this.OnChannelModeReceived(parameters, user);
                 }
                 else
                 {
@@ -1093,7 +1114,7 @@
             {
                 var parameters = e.Message.Parameters.Skip(1).ToList();
 
-                this.OnChannelModeReceived(parameters);
+                this.OnChannelModeReceived(parameters, user);
 
                 var modeEvent = this.ModeReceivedEvent;
                 if (modeEvent != null)
@@ -1133,7 +1154,6 @@
             }
         }
 
-        
         /// <summary>
         /// To be finished
         /// </summary>
