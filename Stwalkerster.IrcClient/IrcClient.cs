@@ -618,7 +618,7 @@
                 }
 
                 var parameters = message.Parameters.ToList();
-                if (parameters.Count() != 8)
+                if (parameters.Count != 8)
                 {
                     throw new ArgumentException("Expected 8 WHOX parameters.", "message");
                 }
@@ -1220,17 +1220,17 @@
                 var parsedName = name;
                 var voice = false;
                 var op = false;
-
-                if (parsedName.StartsWith("+"))
-                {
-                    parsedName = parsedName.Substring(1);
-                    voice = true;
-                }
-
+                
                 if (parsedName.StartsWith("@"))
                 {
                     parsedName = parsedName.Substring(1);
                     op = true;
+                }
+                
+                if (parsedName.StartsWith("+"))
+                {
+                    parsedName = parsedName.Substring(1);
+                    voice = true;
                 }
 
                 lock (this.userOperationLock)
