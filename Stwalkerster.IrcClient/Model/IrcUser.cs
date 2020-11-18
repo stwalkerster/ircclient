@@ -1,5 +1,6 @@
 ﻿namespace Stwalkerster.IrcClient.Model
 {
+    using System;
     using Stwalkerster.IrcClient.Interfaces;
     using Stwalkerster.IrcClient.Model.Interfaces;
 
@@ -13,9 +14,12 @@
         /// </summary>
         private string account;
 
+        private readonly Guid hashCode;
+
         public IrcUser(IIrcClient client)
         {
             this.Client = client;
+            this.hashCode = Guid.NewGuid();
         }
 
         /// <summary>
@@ -65,15 +69,6 @@
         /// </summary>
         public string Username { get; set; }
 
-        /// <summary>
-        /// The from prefix.
-        /// </summary>
-        /// <param name="prefix">
-        /// The prefix.
-        /// </param>
-        /// <returns>
-        /// The <see cref="IrcUser" />.
-        /// </returns>
         public static IrcUser FromPrefix(string prefix, IIrcClient client)
         {
             string nick;
@@ -105,15 +100,6 @@
             return new IrcUser(client) {Hostname = host, Username = user, Nickname = nick, SkeletonStatus = IrcUserSkeletonStatus.PrefixOnly};
         }
 
-        /// <summary>
-        /// The equals.
-        /// </summary>
-        /// <param name="obj">
-        /// The object.
-        /// </param>
-        /// <returns>
-        /// The <see cref="bool" />.
-        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj))
@@ -133,24 +119,12 @@
 
             return this.Equals((IrcUser) obj);
         }
-
-        /// <summary>
-        /// The get hash code.
-        /// </summary>
-        /// <returns>
-        /// The <see cref="int" />.
-        /// </returns>
+        
         public override int GetHashCode()
         {
-            return this.Nickname != null ? this.Nickname.GetHashCode() : 0;
+            return this.hashCode.GetHashCode();
         }
 
-        /// <summary>
-        /// The to string.
-        /// </summary>
-        /// <returns>
-        /// The <see cref="string" />.
-        /// </returns>
         public override string ToString()
         {
             if (string.IsNullOrEmpty(this.Account))
