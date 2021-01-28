@@ -3,7 +3,6 @@
     using Castle.Core;
     using Castle.MicroKernel.Registration;
     using Castle.Windsor;
-    using Castle.Windsor.Installer;
     using Prometheus;
     using Stwalkerster.IrcClient.Interfaces;
     using Stwalkerster.IrcClient.Messages;
@@ -32,7 +31,7 @@
                             restartOnHeavyLag: false
                         )));
             
-            container.Install(FromAssembly.This());
+            container.Install(new Installer());
             
             var app = container.Resolve<Launch>();
         }
