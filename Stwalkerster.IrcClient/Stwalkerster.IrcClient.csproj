@@ -9,7 +9,7 @@
         <Description>An IRC client library</Description>
         <Copyright>Copyright © Simon Walker 2021</Copyright>
         <PackageProjectUrl>https://stwalkerster.co.uk/ircclient/</PackageProjectUrl>
-        <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
     </PropertyGroup>
 
     <ItemGroup>

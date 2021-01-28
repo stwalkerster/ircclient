@@ -130,7 +130,7 @@
             {
                 this.Logger.Debug("Error disposing writer and stream.", ex);
             }
-            catch (ObjectDisposedException ex)
+            catch (ObjectDisposedException)
             {
                 this.Logger.Debug("Writer stream already disposed.");
             }
@@ -145,7 +145,7 @@
             {
                 this.Logger.Debug("Error closing socket.", ex);
             }
-            catch (ObjectDisposedException ex)
+            catch (ObjectDisposedException)
             {
                 this.Logger.Debug("Socket already disposed.");
             }
