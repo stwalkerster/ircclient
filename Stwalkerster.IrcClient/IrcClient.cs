@@ -210,6 +210,8 @@
         private string expectedPingMessage;
         private readonly AutoResetEvent pingReplyEvent;
         private readonly Thread pingThread;
+        private readonly AutoResetEvent pingThreadTimerWait = new AutoResetEvent(false);
+        
         private int lagTimer;
         private readonly bool restartOnHeavyLag;
         private readonly bool reclaimNickFromServices;
@@ -754,15 +756,10 @@
             }
         }
 
-        private void Disconnect(string errorMessage)
+        void Disconnect(string errorMessage)
         {
             this.pingThreadAlive = false;
-
-            if (!this.pingThread.Equals(Thread.CurrentThread))
-            {
-                // we're not on this thread, so forcibly abort it now.
-                this.pingThread.Abort();
-            }
+            this.pingThreadTimerWait.Set();
 
             this.logger.Fatal(errorMessage);
             this.networkClient.Disconnect();
@@ -1755,15 +1752,23 @@
         private void PingThreadWorker()
         {
             this.pingThreadAlive = true;
-            var timerWait = new AutoResetEvent(false);
-
+            
             while (this.pingThreadAlive)
             {
-                timerWait.WaitOne(TimeSpan.FromSeconds(this.PingInterval));
+                var set = this.pingThreadTimerWait.WaitOne(TimeSpan.FromSeconds(this.PingInterval));
+                
+                if (set)
+                {
+                    // we've been told to check our current status immediately.
+                    this.logger.Debug("Ping thread skipping wait");
+                    continue;
+                }
 
                 this.PingThreadHandlePing();
                 this.PingThreadHandleNickChange();
             }
+            
+            this.logger.Debug("Ping thread exited!");
         }
 
         private void PingThreadHandlePing()

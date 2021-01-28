@@ -61,6 +61,7 @@
 
         private bool disconnectedFired;
         private readonly object disconnectedLock = new object();
+        private bool alive;
 
         /// <summary>
         ///     Initialises a new instance of the <see cref="NetworkClient" /> class.
@@ -84,6 +85,8 @@
 
             this.sendQueue = new LinkedList<string>();
             this.client = new TcpClient();
+
+            this.alive = true;
             
             this.readerThread = new Thread(this.ReaderThreadTask);
             this.writerThread = new Thread(this.WriterThreadTask);
@@ -125,16 +128,26 @@
             }
             catch (IOException ex)
             {
-                this.Logger.Info("Error disposing writer and stream.", ex);
+                this.Logger.Debug("Error disposing writer and stream.", ex);
+            }
+            catch (ObjectDisposedException ex)
+            {
+                this.Logger.Debug("Writer stream already disposed.");
             }
 
+            this.alive = false;
+            
             try
             {
                 this.client.Close();
             }
             catch (IOException ex)
             {
-                this.Logger.Info("Error closing socket.", ex);
+                this.Logger.Debug("Error closing socket.", ex);
+            }
+            catch (ObjectDisposedException ex)
+            {
+                this.Logger.Debug("Socket already disposed.");
             }
         }
 
@@ -237,7 +250,7 @@
         {
             try
             {
-                while (this.client.Connected)
+                while (this.client.Connected && this.alive)
                 {
                     var data = this.Reader.ReadLine();
 
@@ -273,7 +286,7 @@
             }
             finally
             {
-                this.writerThread.Abort();
+                this.alive = false;
                 this.client.Close();
 
                 this.Logger.Debug("Firing disconnect event from reader thread!");    
@@ -285,7 +298,7 @@
         {
             try
             {
-                while (this.client.Connected)
+                while (this.client.Connected && this.alive)
                 {
                     string item = null;
 
@@ -346,8 +359,8 @@
                 throw;
             }
             finally
-            {            
-                this.readerThread.Abort();
+            {
+                this.alive = false;
                 this.client.Close();
 
                 this.Logger.Debug("Firing disconnect event from writer thread!");    

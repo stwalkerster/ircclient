@@ -43,6 +43,11 @@
             {
                 if (!args.IsNotice)
                 {
+                    if (args.Message == ".quit")
+                    {
+                        (args.Client as IrcClient)?.Inject("QUIT :*waves*");
+                    }
+                    
                     var message = new Message(
                         "PRIVMSG",
                         new[] {"##stwalkerster-development", args.User.ToString() + " -> " + args.Client.Nickname});
