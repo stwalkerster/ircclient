@@ -14,7 +14,6 @@
 
     <ItemGroup>
       <PackageReference Include="Castle.Core-log4net" Version="4.4.1" />
-      <PackageReference Include="Castle.EventWiringFacility" Version="4.1.1" />
       <PackageReference Include="Castle.LoggingFacility" Version="4.1.1" />
     </ItemGroup>
 
