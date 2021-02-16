@@ -260,7 +260,7 @@
             this.syncLogger = this.logger.CreateChildLogger("Sync");
             this.ReceivedIrcMessage += this.OnIrcMessageReceivedIrcEvent;
 
-            this.clientCapabilities = new List<string> {"sasl", "account-notify", "extended-join", "multi-prefix"};
+            this.clientCapabilities = new List<string> {"sasl", "account-notify", "extended-join", "multi-prefix", "chghost"};
             
             this.userCache = new Dictionary<string, IrcUser>();
             this.channels = new Dictionary<string, IrcChannel>();
@@ -1134,7 +1134,12 @@
             {
                 this.OnAccountMessageReceived(e, user);
             }
-
+            
+            if ((e.Message.Command == "CHGHOST") && (user != null))
+            {
+                this.OnChghostMessageReceived(e, user);
+            }
+            
             if ((e.Message.Command == "NICK") && (user != null))
             {
                 this.OnNickChangeReceived(e, user);
@@ -1148,6 +1153,40 @@
                     var parameters = e.Message.Parameters.ToList();
                     inviteReceivedEvent(this, new InviteEventArgs(e.Message, user, parameters[1], parameters[0], this));
                 }
+            }
+        }
+
+        private void OnChghostMessageReceived(IrcMessageReceivedEventArgs e, IUser user)
+        {
+            var parameters = e.Message.Parameters.ToList();
+            var newUser = parameters[0];
+            var newHost = parameters[1];
+            
+            var oldNickname = user.Nickname;
+            
+            this.logger.InfoFormat("Changing user/host of {0} to {1}@{2} in nick tracking database.", oldNickname, newUser, newHost);
+
+            try
+            {
+                lock (this.userOperationLock)
+                {
+                    // update the user cache.
+                    var ircUser = this.userCache[oldNickname];
+
+                    ircUser.Username = newUser;
+                    ircUser.Hostname = newHost;
+                    
+                    // flesh out the skeleton
+                    if (ircUser.SkeletonStatus < IrcUserSkeletonStatus.PrefixOnly)
+                    {
+                        ircUser.SkeletonStatus = IrcUserSkeletonStatus.PrefixOnly;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                this.logger.Error("Nickname tracking is no longer valid.", ex);
+                this.nickTrackingValid = false;
             }
         }
 

@@ -258,6 +258,117 @@
 
             // todo verify state
         }
+
+        [Test]
+        public void TestChghostCapability()
+        {
+            // initial client setup
+            this.DoSetup("stwtestbot");
+
+            // shortcut functions for logs
+            Action<string> i = data => this.networkClient.Raise(
+                x => x.DataReceived += null,
+                this.networkClient.Object,
+                new DataReceivedEventArgs(data));
+            Action<string> o = data => this.networkClient.Verify(x => x.Send(data));
+            
+            o("CAP LS");
+            i(":orwell.freenode.net CAP * LS :account-notify extended-join identify-msg multi-prefix sasl chghost");
+            o("CAP REQ :account-notify extended-join multi-prefix chghost");
+            i(":orwell.freenode.net CAP * ACK :account-notify extended-join multi-prefix chghost");
+            o("CAP END");
+            o("USER username * * :real name");
+            o("NICK stwtestbot");
+            i(":orwell.freenode.net 001 stwtestbot :Welcome to the freenode Internet Relay Chat Network stwtestbot");
+            i(":stwtestbot MODE stwtestbot :+i");
+            o("MODE stwtestbot +Q");
+            i(":stwtestbot MODE stwtestbot :+Q");
+            
+            this.client.JoinChannel("##stwalkerster-development");
+            o("JOIN ##stwalkerster-development");
+            i(":stwtestbot!~stwtestbo@cpc104826-sgyl39-2-0-cust295.18-2.cable.virginm.net JOIN ##stwalkerster-development * :stwtestbot");
+            i(":orwell.freenode.net 353 stwtestbot = ##stwalkerster-development :stwtestbot @ChanServ");
+            i(":orwell.freenode.net 366 stwtestbot ##stwalkerster-development :End of /NAMES list.");
+
+            Assert.AreEqual(2, this.client.UserCache.Count);
+            Assert.IsTrue(this.client.UserCache.ContainsKey("ChanServ"));
+            Assert.AreEqual(null, this.client.UserCache["ChanServ"].Hostname);
+            Assert.AreEqual(null, this.client.UserCache["ChanServ"].Account);
+            
+            o("WHO ##stwalkerster-development %uhnatfc,001");
+            i(":orwell.freenode.net 354 stwtestbot 001 ##stwalkerster-development ~stwtestbo cpc104826-sgyl39-2-0-cust295.18-2.cable.virginm.net stwtestbot H 0");
+            i(":orwell.freenode.net 354 stwtestbot 001 ##stwalkerster-development ChanServ services. ChanServ H@ 0");
+            i(":orwell.freenode.net 315 stwtestbot ##stwalkerster-development :End of /WHO list.");
+            o("MODE ##stwalkerster-development");
+            i(":orwell.freenode.net 324 stwtestbot ##stwalkerster-development +ntf ##stwalkerster");
+            i(":orwell.freenode.net 329 stwtestbot ##stwalkerster-development 1364176563");
+
+            Assert.AreEqual(2, this.client.UserCache.Count);
+            Assert.IsTrue(this.client.UserCache.ContainsKey("ChanServ"));
+            Assert.AreEqual("services.", this.client.UserCache["ChanServ"].Hostname);
+            Assert.AreEqual(null, this.client.UserCache["ChanServ"].Account);
+            Assert.AreEqual(false, this.client.UserCache["ChanServ"].Away);
+            
+            i(":stwalkerster!stwalkerst@spearow.lon.stwalkerster.net JOIN ##stwalkerster-development stwalkerster :Simon Walker (fearow.lon.stwalkerster.net)");
+            i(":ChanServ!ChanServ@services. MODE ##stwalkerster-development +o stwalkerster");
+            
+            Assert.AreEqual(3, this.client.UserCache.Count);
+            Assert.IsTrue(this.client.UserCache.ContainsKey("ChanServ"));
+            Assert.AreEqual("services.", this.client.UserCache["ChanServ"].Hostname);
+            Assert.AreEqual(null, this.client.UserCache["ChanServ"].Account);
+            Assert.AreEqual(false, this.client.UserCache["ChanServ"].Away);
+            Assert.IsTrue(this.client.UserCache.ContainsKey("stwalkerster"));
+            Assert.AreEqual("spearow.lon.stwalkerster.net", this.client.UserCache["stwalkerster"].Hostname);
+            Assert.AreEqual("stwalkerst", this.client.UserCache["stwalkerster"].Username);
+            Assert.AreEqual("stwalkerster", this.client.UserCache["stwalkerster"].Account);
+
+            i(":stwalkerster!stwalkerst@spearow.lon.stwalkerster.net CHGHOST stwalkerst wikimedia/stwalkerster");
+            
+            Assert.AreEqual(3, this.client.UserCache.Count);
+            Assert.IsTrue(this.client.UserCache.ContainsKey("ChanServ"));
+            Assert.AreEqual("services.", this.client.UserCache["ChanServ"].Hostname);
+            Assert.AreEqual(null, this.client.UserCache["ChanServ"].Account);
+            Assert.AreEqual(false, this.client.UserCache["ChanServ"].Away);
+            Assert.IsTrue(this.client.UserCache.ContainsKey("stwalkerster"));
+            Assert.AreEqual("wikimedia/stwalkerster", this.client.UserCache["stwalkerster"].Hostname);
+            Assert.AreEqual("stwalkerst", this.client.UserCache["stwalkerster"].Username);
+            Assert.AreEqual("stwalkerster", this.client.UserCache["stwalkerster"].Account);
+            
+            i(":stwalkerster!stwalkerst@wikimedia/stwalkerster CHGHOST potato wikimedia/stwalkerster");
+            
+            Assert.AreEqual(3, this.client.UserCache.Count);
+            Assert.IsTrue(this.client.UserCache.ContainsKey("ChanServ"));
+            Assert.AreEqual("services.", this.client.UserCache["ChanServ"].Hostname);
+            Assert.AreEqual(null, this.client.UserCache["ChanServ"].Account);
+            Assert.AreEqual(false, this.client.UserCache["ChanServ"].Away);
+            Assert.IsTrue(this.client.UserCache.ContainsKey("stwalkerster"));
+            Assert.AreEqual("wikimedia/stwalkerster", this.client.UserCache["stwalkerster"].Hostname);
+            Assert.AreEqual("potato", this.client.UserCache["stwalkerster"].Username);
+            Assert.AreEqual("stwalkerster", this.client.UserCache["stwalkerster"].Account);
+            
+            Assert.IsTrue(this.client.UserCache.ContainsKey("stwtestbot"));
+            Assert.AreEqual("cpc104826-sgyl39-2-0-cust295.18-2.cable.virginm.net", this.client.UserCache["stwtestbot"].Hostname);
+            Assert.AreEqual("~stwtestbo", this.client.UserCache["stwtestbot"].Username);
+            Assert.IsNull(this.client.UserCache["stwtestbot"].Account);
+            
+            i(":stwtestbot!~stwtestbo@cpc104826-sgyl39-2-0-cust295.18-2.cable.virginm.net CHGHOST testbot testbot/testytest");
+
+            Assert.AreEqual(3, this.client.UserCache.Count);
+            Assert.IsTrue(this.client.UserCache.ContainsKey("ChanServ"));
+            Assert.AreEqual("services.", this.client.UserCache["ChanServ"].Hostname);
+            Assert.AreEqual(null, this.client.UserCache["ChanServ"].Account);
+            Assert.AreEqual(false, this.client.UserCache["ChanServ"].Away);
+            
+            Assert.IsTrue(this.client.UserCache.ContainsKey("stwalkerster"));
+            Assert.AreEqual("wikimedia/stwalkerster", this.client.UserCache["stwalkerster"].Hostname);
+            Assert.AreEqual("potato", this.client.UserCache["stwalkerster"].Username);
+            Assert.AreEqual("stwalkerster", this.client.UserCache["stwalkerster"].Account);
+            
+            Assert.IsTrue(this.client.UserCache.ContainsKey("stwtestbot"));
+            Assert.AreEqual("testbot/testytest", this.client.UserCache["stwtestbot"].Hostname);
+            Assert.AreEqual("testbot", this.client.UserCache["stwtestbot"].Username);
+            Assert.IsNull(this.client.UserCache["stwtestbot"].Account);
+        }
         
         /// <summary>
         /// Tests read from WHO and my JOIN.
