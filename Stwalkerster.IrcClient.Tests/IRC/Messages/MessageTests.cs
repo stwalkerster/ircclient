@@ -137,6 +137,42 @@
 
             this.DoParseTest(message, expected);
         }
+        
+        [Test]
+        public void ShouldParseCorrectlyTags2()
+        {
+            // arrange
+            string message = "@account=stwalkerster;foo=bar :stwalkerster!~stwalkers@wikerpedier/stwalkerster PRIVMSG ##stwalkerster :foo";
+            var expected = new Message(
+                "stwalkerster!~stwalkers@wikerpedier/stwalkerster",
+                "PRIVMSG",
+                new List<string>
+                {
+                    "##stwalkerster",
+                    "foo"
+                },
+                new Dictionary<string, string> {{"account", "stwalkerster"}, {"foo", "bar"}});
+
+            this.DoParseTest(message, expected);
+        }
+        
+        [Test]
+        public void ShouldParseCorrectlyTags3()
+        {
+            // arrange
+            string message = "@account=stwalkerster\\spotato;foo=bar\\\\baz :stwalkerster!~stwalkers@wikerpedier/stwalkerster PRIVMSG ##stwalkerster :foo";
+            var expected = new Message(
+                "stwalkerster!~stwalkers@wikerpedier/stwalkerster",
+                "PRIVMSG",
+                new List<string>
+                {
+                    "##stwalkerster",
+                    "foo"
+                },
+                new Dictionary<string, string> {{"account", "stwalkerster potato"}, {"foo", "bar\\baz"}});
+
+            this.DoParseTest(message, expected);
+        }
 
         /// <summary>
         /// The do parse test.
