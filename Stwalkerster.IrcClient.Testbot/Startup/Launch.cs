@@ -22,10 +22,11 @@
                         new IrcConfiguration(
                             hostname: "niven.freenode.net",
                             port: 9003,
-                            authToServices: false,
+                            authToServices: true,
                             nickname: "stwtestbot",
                             username: "stwtestbot",
                             realName: "stwtestbot",
+                            password: "stwtestbot",
                             ssl: true,
                             clientName: "TestClient",
                             restartOnHeavyLag: false

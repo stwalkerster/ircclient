@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Collections.ObjectModel;
     using System.Diagnostics.CodeAnalysis;
     using System.Linq;
     using System.Security;
@@ -108,6 +109,7 @@
         /// The client's possible capabilities.
         /// </summary>
         private readonly List<string> clientCapabilities;
+        private readonly List<string> serverCapabilities = new List<string>();
 
         /// <summary>
         /// The connection registration semaphore.
@@ -169,15 +171,12 @@
         /// </summary>
         private readonly IList<string> destinationFlags = new List<string>();
 
-        /// <summary>
-        /// The cap extended join.
-        /// </summary>
         private bool capExtendedJoin;
-
-        /// <summary>
-        /// The SASL capability.
-        /// </summary>
         private bool capSasl;
+        private bool capMultiPrefix;
+        private bool capChghost;
+        private bool capAccountNotify;
+        private bool capCapNotify;
 
         /// <summary>
         /// The data interception function.
@@ -215,6 +214,7 @@
         private int lagTimer;
         private readonly bool restartOnHeavyLag;
         private readonly bool reclaimNickFromServices;
+        
 
         #endregion
 
@@ -233,7 +233,7 @@
 
                 this.clientCapabilities.Remove("sasl");
             }
-
+            
             this.RegisterConnection(null);
         }
 
@@ -260,7 +260,7 @@
             this.syncLogger = this.logger.CreateChildLogger("Sync");
             this.ReceivedIrcMessage += this.OnIrcMessageReceivedIrcEvent;
 
-            this.clientCapabilities = new List<string> {"sasl", "account-notify", "extended-join", "multi-prefix", "chghost"};
+            this.clientCapabilities = new List<string> {"sasl", "account-notify", "extended-join", "multi-prefix", "chghost", "cap-notify"};
             
             this.userCache = new Dictionary<string, IrcUser>();
             this.channels = new Dictionary<string, IrcChannel>();
@@ -397,6 +397,26 @@
         
         public int PingTimeout { get; set; }
         public int PingInterval { get; set; }
+
+        public ReadOnlyCollection<string> ServerCapabilities => new ReadOnlyCollection<string>(this.serverCapabilities);
+
+        /// <summary>
+        /// The cap extended join.
+        /// </summary>
+        public bool CapExtendedJoin => this.capExtendedJoin;
+
+        /// <summary>
+        /// The SASL capability.
+        /// </summary>
+        public bool CapSasl => this.capSasl;
+
+        public bool CapMultiPrefix => this.capMultiPrefix;
+
+        public bool CapChghost => this.capChghost;
+
+        public bool CapAccountNotify => this.capAccountNotify;
+
+        public bool CapCapNotify => this.capCapNotify;
 
         #endregion
 
@@ -744,6 +764,11 @@
                     
                     this.pingReplyEvent.Set();
                 }
+            }
+
+            if (this.HandleCapabilityNegotiation(message))
+            {
+                return;
             }
 
             if (this.connectionRegistered)
@@ -1547,12 +1572,6 @@
             }
         }
 
-        /// <summary>
-        /// The on quit message received.
-        /// </summary>
-        /// <param name="user">
-        /// The user.
-        /// </param>
         private void OnQuitMessageReceived(IrcMessageReceivedEventArgs e, IUser user)
         {
             this.logger.InfoFormat("{0} has left IRC.", user);
@@ -1614,7 +1633,8 @@
                 else
                 {
                     // we support capabilities, use them!
-                    this.Send(new Message("CAP", "LS"));
+                    this.Send(new Message("CAP", new[] {"LS", "302"}));
+                    this.serverCapabilities.Clear();
                 }
 
                 return;
@@ -1661,93 +1681,6 @@
                 return;
             }
 
-            // we've recieved a reply to our CAP commands
-            if (message.Command == "CAP")
-            {
-                var list = message.Parameters.ToList();
-
-                if (list[1] == "LS")
-                {
-                    var serverCapabilities = list[2].Split(' ');
-                    this.logger.DebugFormat("Server Capabilities: {0}", string.Join(", ", serverCapabilities));
-                    this.logger.DebugFormat("Client Capabilities: {0}", string.Join(", ", this.clientCapabilities));
-
-                    var caps = serverCapabilities.Intersect(this.clientCapabilities).ToList();
-
-                    // We don't support one without the other!
-                    if (caps.Intersect(new[] { "account-notify", "extended-join" }).Count() == 1)
-                    {
-                        this.logger.Warn(
-                            "Dropping account-notify and extended-join support since server only supports one of them!");
-                        caps.Remove("account-notify");
-                        caps.Remove("extended-join");
-                    }
-
-                    if (caps.Count == 0)
-                    {
-                        // nothing is suitable for us, so downgrade to 1459
-                        this.logger.InfoFormat("Requesting no capabilities.");
-
-                        this.Send(new Message("CAP", "END"));
-                        this.Send1459Registration();
-
-                        return;
-                    }
-
-                    this.logger.InfoFormat("Requesting capabilities: {0}", string.Join(", ", caps));
-                    
-                    this.Send(new Message("CAP", new[] {"REQ", string.Join(" ", caps)}));
-
-                    return;
-                }
-
-                if (list[1] == "ACK")
-                {
-                    var caps = list[2].Split(' ');
-                    this.logger.InfoFormat("Acknowledged capabilities: {0}", string.Join(", ", caps));
-
-                    foreach (var cap in caps)
-                    {
-                        if (cap == "sasl")
-                        {
-                            this.capSasl = true;
-                        }
-
-                        if (cap == "extended-join")
-                        {
-                            // This includes account-notify since both are required.
-                            this.capExtendedJoin = true;
-                        }
-
-                        // We don't care about multi-prefix, since the code to 
-                        // handle it works nicely for those without it.
-                    }
-
-                    if (this.capSasl)
-                    {
-                        this.SaslAuth(null);
-                    }
-                    else
-                    {
-                        this.Send(new Message("CAP", "END"));
-                        this.Send1459Registration();
-                    }
-
-                    return;
-                }
-
-                if (list[1] == "NAK")
-                {
-                    // something went wrong, so downgrade to 1459.
-                    var caps = list[2].Split(' ');
-                    this.logger.WarnFormat("NOT Acked capabilities: {0}", string.Join(", ", caps));
-
-                    this.Send(new Message("CAP", "END"));
-                    this.Send1459Registration();
-                    return;
-                }
-            }
-
             if (message.Command == Numerics.SaslLoggedIn)
             {
                 var strings = message.Parameters.ToArray();
@@ -1786,6 +1719,184 @@
             }
 
             this.logger.ErrorFormat("How did I get here? ({0} recieved)", message.Command);
+        }
+
+        private bool HandleCapabilityNegotiation(IMessage message)
+        {
+            // we've recieved a reply to our CAP commands
+            if (message.Command == "CAP")
+            {
+                var list = message.Parameters.ToList();
+
+                if (list[1] == "LS")
+                {
+                    if (list[2] == "*")
+                    {
+                        this.serverCapabilities.AddRange(list[3].Split(' '));
+                        return true;
+                    }
+
+                    this.serverCapabilities.AddRange(list[2].Split(' '));
+                    this.logger.DebugFormat("Server Capabilities: {0}", string.Join(", ", this.ServerCapabilities));
+                    this.logger.DebugFormat("Client Capabilities: {0}", string.Join(", ", this.clientCapabilities));
+
+                    var parsedServerCaps =
+                        this.serverCapabilities.Select(x => x.Contains("=") ? x.Substring(0, x.IndexOf("=", StringComparison.Ordinal)) : x);
+                    
+                    var caps = parsedServerCaps.Intersect(this.clientCapabilities).ToList();
+
+                    // We don't support one without the other!
+                    if (caps.Intersect(new[] {"account-notify", "extended-join"}).Count() == 1)
+                    {
+                        this.logger.Warn(
+                            "Dropping account-notify and extended-join support since server only supports one of them!");
+                        caps.Remove("account-notify");
+                        caps.Remove("extended-join");
+                    }
+
+                    var saslCap = this.serverCapabilities.FirstOrDefault(x => x.StartsWith("sasl"));
+                    if (saslCap!= null && saslCap.Contains("="))
+                    {
+                        var mechanisms = saslCap.Substring(saslCap.IndexOf("=", StringComparison.Ordinal)+1).Split(',');
+
+                        if (!mechanisms.Contains("PLAIN"))
+                        {
+                            // We only support PLAIN.
+                            caps.Remove("sasl");
+                        }
+                    }
+
+                    if (caps.Count == 0)
+                    {
+                        // nothing is suitable for us, so downgrade to 1459
+                        this.logger.InfoFormat("Requesting no capabilities.");
+
+                        this.Send(new Message("CAP", "END"));
+                        this.Send1459Registration();
+
+                        return true;
+                    }
+
+                    this.logger.InfoFormat("Requesting capabilities: {0}", string.Join(", ", caps));
+
+                    this.Send(new Message("CAP", new[] {"REQ", string.Join(" ", caps)}));
+
+                    return true;
+                }
+
+                if (list[1] == "ACK")
+                {
+                    var caps = list[2].Split(new[]{' '}, StringSplitOptions.RemoveEmptyEntries);
+                    this.logger.InfoFormat("Acknowledged capabilities: {0}", string.Join(", ", caps));
+
+                    foreach (var cap in caps)
+                    {
+                        // are we adding a capability, or removing it? ACK acknowledges both.
+                        var adding = true;
+                        var parsedCap = cap;
+                        if (cap[0] == '-')
+                        {
+                            adding = false;
+                            parsedCap = cap.Substring(1);
+                        }
+
+                        switch (parsedCap)
+                        {
+                            case "sasl":
+                                this.capSasl = adding;
+                                break;
+                            case "extended-join":
+                                this.capExtendedJoin = adding;
+                                break;
+                            case "account-notify":
+                                this.capAccountNotify = adding;
+                                break;
+                            case "multi-prefix":
+                                this.capMultiPrefix = adding;
+                                break;
+                            case "chghost":
+                                this.capChghost = adding;
+                                break;
+                            case "cap-notify":
+                                this.capCapNotify = adding;
+                                break;
+                        }
+                    }
+
+                    if (this.capSasl)
+                    {
+                        this.SaslAuth(null);
+                    }
+                    else
+                    {
+                        this.Send(new Message("CAP", "END"));
+                        this.Send1459Registration();
+                    }
+
+                    return true;
+                }
+
+                if (list[1] == "NAK")
+                {
+                    // something went wrong, so downgrade to 1459.
+                    var caps = list[2].Split(' ');
+                    this.logger.WarnFormat("NOT Acked capabilities: {0}", string.Join(", ", caps));
+
+                    this.Send(new Message("CAP", "END"));
+                    this.Send1459Registration();
+                    return true;
+                }
+
+                if (list[1] == "NEW")
+                {
+                    this.serverCapabilities.AddRange(list[2].Split(' '));
+                }
+
+                if (list[1] == "DEL")
+                {
+                    var removedCapabilities = list[2].Split(' ');
+
+                    foreach (var capability in removedCapabilities)
+                    {
+                        this.serverCapabilities.Remove(capability);
+
+                        switch (capability)
+                        {
+                            case "sasl":
+                                this.capSasl = false;
+                                break;
+                            case "multi-prefix":
+                                this.capMultiPrefix = false;
+                                break;
+                            case "extended-join":
+                                this.capExtendedJoin = false;
+                                break;
+                            case "account-notify":
+                                this.capAccountNotify = false;
+                                break;
+                            case "chghost":
+                                this.capChghost = false;
+                                break;
+                            case "cap-notify":
+                                this.capCapNotify = false;
+                                break;
+                        }
+                    }
+
+                    if (this.capAccountNotify && !this.capExtendedJoin)
+                    {
+                        //mismatch between capabilities, disable both
+                        this.Send(new Message("CAP", new[] {"REQ", "-account-notify"}));
+                    }
+                    else if (!this.capAccountNotify && this.capExtendedJoin)
+                    {
+                        //mismatch between capabilities, disable both
+                        this.Send(new Message("CAP", new[] {"REQ", "-extended-join"}));
+                    }
+                }
+            }
+
+            return false;
         }
 
         private void PingThreadWorker()

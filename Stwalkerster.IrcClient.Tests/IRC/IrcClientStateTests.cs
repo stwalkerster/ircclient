@@ -40,7 +40,7 @@
             Action<string> o = data => this.networkClient.Verify(x => x.Send(data));
 
             // Initial setup
-            o("CAP LS");
+            o("CAP LS 302");
             i(":kornbluth.freenode.net CAP * LS :account-notify extended-join identify-msg multi-prefix sasl");
             o("CAP REQ :account-notify extended-join multi-prefix");
             i(":kornbluth.freenode.net CAP * ACK :account-notify extended-join multi-prefix");
@@ -116,13 +116,7 @@
                 });
         }
 
-        /// <summary>
-        /// The do setup.
-        /// </summary>
-        /// <param name="nickName">
-        /// The nick Name.
-        /// </param>
-        public void DoSetup(string nickName)
+        public void DoSetup(string nickName, string password = null)
         {
             this.networkClient = new Mock<INetworkClient>();
             this.IrcConfiguration.Setup(x => x.Nickname).Returns(nickName);
@@ -130,6 +124,17 @@
             this.IrcConfiguration.Setup(x => x.RealName).Returns("real name");
             this.IrcConfiguration.Setup(x => x.ClientName).Returns("client");
             this.IrcConfiguration.Setup(x => x.RestartOnHeavyLag).Returns(false);
+            this.IrcConfiguration.Setup(x => x.Password).Returns(password);
+            
+            if (!string.IsNullOrEmpty(password))
+            {
+                this.IrcConfiguration.Setup(x => x.AuthToServices).Returns(true);
+            }
+            else
+            {
+                this.IrcConfiguration.Setup(x => x.AuthToServices).Returns(false);
+            }
+            
             this.SupportHelper
                 .Setup(x => x.HandlePrefixMessageSupport(It.IsAny<string>(), It.IsAny<IDictionary<string, string>>()))
                 .Callback(
@@ -154,7 +159,7 @@
                 new DataReceivedEventArgs(data));
             Action<string> o = data => this.networkClient.Verify(x => x.Send(data));
             
-            o("CAP LS");
+            o("CAP LS 302");
             i(":orwell.freenode.net CAP * LS :account-notify extended-join identify-msg multi-prefix sasl");
             o("CAP REQ :account-notify extended-join multi-prefix");
             i(":orwell.freenode.net CAP * ACK :account-notify extended-join multi-prefix ");
@@ -192,7 +197,7 @@
                 new DataReceivedEventArgs(data));
             Action<string> o = data => this.networkClient.Verify(x => x.Send(data));
             
-            o("CAP LS");
+            o("CAP LS 302");
             i(":orwell.freenode.net CAP * LS :account-notify extended-join identify-msg multi-prefix sasl");
             o("CAP REQ :account-notify extended-join multi-prefix");
             i(":orwell.freenode.net CAP * ACK :account-notify extended-join multi-prefix ");
@@ -272,7 +277,7 @@
                 new DataReceivedEventArgs(data));
             Action<string> o = data => this.networkClient.Verify(x => x.Send(data));
             
-            o("CAP LS");
+            o("CAP LS 302");
             i(":orwell.freenode.net CAP * LS :account-notify extended-join identify-msg multi-prefix sasl chghost");
             o("CAP REQ :account-notify extended-join multi-prefix chghost");
             i(":orwell.freenode.net CAP * ACK :account-notify extended-join multi-prefix chghost");
@@ -369,6 +374,138 @@
             Assert.AreEqual("testbot", this.client.UserCache["stwtestbot"].Username);
             Assert.IsNull(this.client.UserCache["stwtestbot"].Account);
         }
+
+        [Test]
+        public void TestCapabilityNegotiation()
+        {
+            // initial client setup
+            this.DoSetup("stwtestbot");
+
+            // shortcut functions for logs
+            Action<string> i = data => this.networkClient.Raise(
+                x => x.DataReceived += null,
+                this.networkClient.Object,
+                new DataReceivedEventArgs(data));
+            Action<string> o = data => this.networkClient.Verify(x => x.Send(data));
+            
+            o("CAP LS 302");
+            i(":orwell.freenode.net CAP * LS * :account-notify extended-join cap-notify identify-msg multi-prefix chghost");
+            i(":orwell.freenode.net CAP * LS :foo bar baz sasl=PLAIN,EXTERNAL draft/foobar");
+            o("CAP REQ :account-notify extended-join cap-notify multi-prefix chghost");
+            i(":orwell.freenode.net CAP * ACK :account-notify extended-join multi-prefix chghost cap-notify");
+            o("CAP END");
+            o("USER username * * :real name");
+            o("NICK stwtestbot");
+            i(":orwell.freenode.net 001 stwtestbot :Welcome to the freenode Internet Relay Chat Network stwtestbot");
+
+            Assert.AreEqual(11, this.client.ServerCapabilities.Count);
+            Assert.Contains("account-notify", this.client.ServerCapabilities);
+            Assert.Contains("chghost", this.client.ServerCapabilities);
+            Assert.Contains("cap-notify", this.client.ServerCapabilities);
+            Assert.Contains("foo", this.client.ServerCapabilities);
+            Assert.Contains("bar", this.client.ServerCapabilities);
+            Assert.Contains("draft/foobar", this.client.ServerCapabilities);
+            Assert.Contains("sasl=PLAIN,EXTERNAL", this.client.ServerCapabilities);
+            Assert.IsFalse(this.client.ServerCapabilities.Contains("*"));
+            Assert.IsFalse(this.client.ServerCapabilities.Contains("qux"));
+            Assert.IsFalse(this.client.ServerCapabilities.Contains("draft"));
+            
+            Assert.IsTrue(this.client.CapChghost);
+            Assert.IsTrue(this.client.CapAccountNotify);
+            Assert.IsTrue(this.client.CapExtendedJoin);
+            Assert.IsTrue(this.client.CapMultiPrefix);
+            Assert.IsTrue(this.client.CapCapNotify);
+
+            i(":orwell.freenode.net CAP stwtestbot DEL :account-notify");
+            o("CAP REQ -extended-join");
+            i(":orwell.freenode.net CAP * ACK :-extended-join");
+
+            Assert.IsTrue(this.client.CapChghost);
+            Assert.IsFalse(this.client.CapAccountNotify);
+            Assert.IsFalse(this.client.CapExtendedJoin);
+            Assert.IsTrue(this.client.CapMultiPrefix);
+            Assert.IsTrue(this.client.CapCapNotify);
+        }
+        
+        [Test]
+        public void TestSasl302Negotiation()
+        {
+            // initial client setup
+            this.DoSetup("stwtestbot", "stwtestbot");
+
+            // shortcut functions for logs
+            Action<string> i = data => this.networkClient.Raise(
+                x => x.DataReceived += null,
+                this.networkClient.Object,
+                new DataReceivedEventArgs(data));
+            Action<string> o = data => this.networkClient.Verify(x => x.Send(data));
+            
+            o("CAP LS 302");
+            i(":orwell.freenode.net CAP * LS :sasl=PLAIN,EXTERNAL cap-notify");
+            o("CAP REQ :sasl cap-notify");
+            i(":orwell.freenode.net CAP * ACK :sasl cap-notify");
+            o("AUTHENTICATE PLAIN");
+            i("AUTHENTICATE +");
+            o("AUTHENTICATE AHVzZXJuYW1lAHN0d3Rlc3Rib3Q=");
+            i(":orwell.freenode.net 900 * *!unknown@example.net stwtestbot :You are now logged in as stwtestbot");
+            i(":orwell.freenode.net 903 * :SASL authentication successful");
+            o("CAP END");
+            o("USER username * * :real name");
+            o("NICK stwtestbot");
+            i(":orwell.freenode.net 001 stwtestbot :Welcome to the freenode Internet Relay Chat Network stwtestbot");
+        }
+
+        [Test]
+        public void TestSasl302NoMechNegotiation()
+        {
+            // initial client setup
+            this.DoSetup("stwtestbot", "stwtestbot");
+
+            // shortcut functions for logs
+            Action<string> i = data => this.networkClient.Raise(
+                x => x.DataReceived += null,
+                this.networkClient.Object,
+                new DataReceivedEventArgs(data));
+            Action<string> o = data => this.networkClient.Verify(x => x.Send(data));
+            
+            o("CAP LS 302");
+            i(":orwell.freenode.net CAP * LS :sasl=EXTERNAL cap-notify");
+            o("CAP REQ cap-notify");
+            i(":orwell.freenode.net CAP * ACK :cap-notify");
+            o("PASS stwtestbot");
+            o("USER username * * :real name");
+            o("NICK stwtestbot");
+            i(":orwell.freenode.net 001 stwtestbot :Welcome to the freenode Internet Relay Chat Network stwtestbot");
+        }
+
+        [Test]
+        public void TestSasl301Negotiation()
+        {
+            // initial client setup
+            this.DoSetup("stwtestbot", "stwtestbot");
+
+            // shortcut functions for logs
+            Action<string> i = data => this.networkClient.Raise(
+                x => x.DataReceived += null,
+                this.networkClient.Object,
+                new DataReceivedEventArgs(data));
+            Action<string> o = data => this.networkClient.Verify(x => x.Send(data));
+            
+            o("CAP LS 302");
+            i(":orwell.freenode.net CAP * LS :sasl cap-notify");
+            o("CAP REQ :sasl cap-notify");
+            i(":orwell.freenode.net CAP * ACK :sasl cap-notify");
+            o("AUTHENTICATE PLAIN");
+            i("AUTHENTICATE +");
+            o("AUTHENTICATE AHVzZXJuYW1lAHN0d3Rlc3Rib3Q=");
+            i(":orwell.freenode.net 900 * *!unknown@example.net stwtestbot :You are now logged in as stwtestbot");
+            i(":orwell.freenode.net 903 * :SASL authentication successful");
+            o("CAP END");
+            o("USER username * * :real name");
+            o("NICK stwtestbot");
+            i(":orwell.freenode.net 001 stwtestbot :Welcome to the freenode Internet Relay Chat Network stwtestbot");
+        }
+        
         
         /// <summary>
         /// Tests read from WHO and my JOIN.
