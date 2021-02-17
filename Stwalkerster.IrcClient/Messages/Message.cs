@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Collections.ObjectModel;
     using System.Linq;
 
     /// <summary>
@@ -9,112 +10,46 @@
     /// </summary>
     public class Message : IMessage
     {
-        /// <summary>
-        /// The command.
-        /// </summary>
-        private readonly string command;
-
-        /// <summary>
-        /// The prefix.
-        /// </summary>
-        private readonly string prefix;
-
-        /// <summary>
-        /// The parameters.
-        /// </summary>
         private readonly IEnumerable<string> parameters;
 
-        /// <summary>
-        /// Initialises a new instance of the <see cref="Message" /> class.
-        /// </summary>
-        /// <param name="command">
-        /// The command.
-        /// </param>
+        private readonly IDictionary<string, string> tags;
+
         public Message(string command)
             : this(null, command, null)
         {
         }
-
-        /// <summary>
-        /// Initialises a new instance of the <see cref="Message" /> class.
-        /// </summary>
-        /// <param name="command">
-        /// The command.
-        /// </param>
-        /// <param name="parameter">
-        /// The parameters.
-        /// </param>
+        
         public Message(string command, string parameter)
             : this(null, command, new List<string> {parameter})
         {
         }
-
-        /// <summary>
-        /// Initialises a new instance of the <see cref="Message" /> class.
-        /// </summary>
-        /// <param name="command">
-        /// The command.
-        /// </param>
-        /// <param name="parameters">
-        /// The parameters.
-        /// </param>
+        
         public Message(string command, IEnumerable<string> parameters)
             : this(null, command, parameters)
         {
         }
-
-        /// <summary>
-        /// Initialises a new instance of the <see cref="Message" /> class.
-        /// </summary>
-        /// <param name="prefix">
-        /// The prefix.
-        /// </param>
-        /// <param name="command">
-        /// The command.
-        /// </param>
-        /// <param name="parameters">
-        /// The parameters.
-        /// </param>
+        
         public Message(string prefix, string command, IEnumerable<string> parameters)
+            :this(prefix, command, parameters, null)
         {
-            this.prefix = prefix;
-            this.command = command;
+        }
+        
+        public Message(string prefix, string command, IEnumerable<string> parameters, IDictionary<string, string> tags)
+        {
+            this.Prefix = prefix;
+            this.Command = command;
             this.parameters = parameters ?? new List<string>();
+            this.tags = tags ?? new Dictionary<string, string>();
         }
 
-        /// <summary>
-        /// Gets the command.
-        /// </summary>
-        public string Command
-        {
-            get { return this.command; }
-        }
+        public string Command { get; }
 
-        /// <summary>
-        /// Gets the prefix.
-        /// </summary>
-        public string Prefix
-        {
-            get { return this.prefix; }
-        }
+        public string Prefix { get; }
 
-        /// <summary>
-        /// Gets the parameters.
-        /// </summary>
-        public IEnumerable<string> Parameters
-        {
-            get { return this.parameters == null ? null : this.parameters.ToArray(); }
-        }
+        public IEnumerable<string> Parameters => this.parameters?.ToArray();
 
-        /// <summary>
-        /// The parse.
-        /// </summary>
-        /// <param name="data">
-        /// The data.
-        /// </param>
-        /// <returns>
-        /// The <see cref="IMessage" />.
-        /// </returns>
+        public IDictionary<string, string> Tags => this.tags == null ? null : new ReadOnlyDictionary<string, string>(this.tags);
+
         public static IMessage Parse(string data)
         {
             var separator = new[] {' '};
@@ -125,7 +60,40 @@
             string prefix = null;
             string command;
             List<string> messageParameters = null;
+            Dictionary<string, string> tags = null;
 
+            if (data.StartsWith("@"))
+            {
+                // Split the incoming data into the tag string and remainder
+                var tagsplit = data.Split(separator, 2, StringSplitOptions.RemoveEmptyEntries);
+                
+                // overwrite the original data, so we don't have to think about the tags later.
+                // This is now a standard 1459 message.
+                data = tagsplit[1];
+
+                var rawtags = tagsplit[0];
+
+                tags = rawtags.Substring(1).Split(';')
+                    .ToDictionary(
+                        keySelector: x => x.Contains("=") ? x.Substring(0, x.IndexOf("=", StringComparison.Ordinal)) : x,
+                        elementSelector: x =>
+                        {
+                            if (!x.Contains("="))
+                            {
+                                return string.Empty;
+                            }
+
+                            var escapedValue = x.Substring(x.IndexOf("=", StringComparison.Ordinal) + 1);
+
+                            return escapedValue
+                                .Replace("\\s", " ")
+                                .Replace("\\r", "\r")
+                                .Replace("\\n", "\n")
+                                .Replace("\\:", ";")
+                                .Replace("\\\\", "\\");
+                        });
+            }
+            
             // Look for a prefix
             if (data.StartsWith(":"))
             {
@@ -174,15 +142,9 @@
                 }
             }
 
-            return new Message(prefix, command, messageParameters);
+            return new Message(prefix, command, messageParameters, tags);
         }
 
-        /// <summary>
-        /// The to string.
-        /// </summary>
-        /// <returns>
-        /// The <see cref="string" />.
-        /// </returns>
         public override string ToString()
         {
             var result = string.Empty;
