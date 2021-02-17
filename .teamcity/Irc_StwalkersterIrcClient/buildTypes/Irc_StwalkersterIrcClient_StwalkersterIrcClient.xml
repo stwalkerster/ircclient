@@ -2,21 +2,19 @@
 <build-type xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" uuid="9443478d-b1f1-4b0c-88d7-1c254cb72ed5" xsi:noNamespaceSchemaLocation="https://www.jetbrains.com/teamcity/schemas/2020.1/project-config.xsd">
   <name>Stwalkerster.IrcClient</name>
   <description />
-  <settings ref="DotNetLibrary">
+  <settings ref="DotNetCoreLibrary">
     <parameters>
-      <param name="extraParameters" value="/p:DefineConstants=PARSERTESTS" />
-      <param name="nunitRunner" value="3.11.1" />
       <param name="primaryProjectName" value="Stwalkerster.IrcClient" />
       <param name="solutionName" value="IRCLib" />
       <param name="system.DefineConstants" value="PARSERTESTS" />
-      <param name="version" value="9.0" />
-      <param name="versiontag" value="-alpha" />
+      <param name="version" value="9.0" spec="text display='normal' description='Two or three-part version number. The build counter will be appended to the end.' validationMode='any'" />
+      <param name="versiontag" value="" spec="text description='e.g. &quot;-alpha&quot;' validationMode='any' display='normal'" />
     </parameters>
     <build-runners />
     <vcs-settings>
       <vcs-entry-ref root-id="Irc_IRCclient" />
       <vcs-entry-ref root-id="EyeInTheSky_ParserTests">
-        <checkout-rule rule="+:parsertests =&gt; parsertests" />
+        <checkout-rule rule="+:parsertests =&gt; Stwalkerster.IrcClient.Tests/bin/Release/netcoreapp3.1/parsertests" />
       </vcs-entry-ref>
     </vcs-settings>
     <requirements />

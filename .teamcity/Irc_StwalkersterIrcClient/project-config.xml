@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" parent-id="Irc" uuid="e619502b-eefb-4317-89b4-0e5106442c5e" xsi:noNamespaceSchemaLocation="https://www.jetbrains.com/teamcity/schemas/2020.1/project-config.xsd">
   <name>Stwalkerster.IrcClient</name>
-  <parameters />
+  <parameters>
+    <param name="docker.dotnet.sdk" value="mcr.microsoft.com/dotnet/sdk:3.1" />
+  </parameters>
   <project-extensions>
     <extension id="PROJECT_EXT_4" type="versionedSettings">
       <parameters>
@@ -9,7 +11,7 @@
         <param name="credentialsStorageType" value="credentialsJSON" />
         <param name="enabled" value="true" />
         <param name="rootId" value="Irc_IRCclient" />
-        <param name="showChanges" value="true" />
+        <param name="showChanges" value="false" />
       </parameters>
     </extension>
   </project-extensions>
