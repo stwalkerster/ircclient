@@ -177,6 +177,7 @@
         private bool capChghost;
         private bool capAccountNotify;
         private bool capCapNotify;
+        private bool capAccountTag;
 
         /// <summary>
         /// The data interception function.
@@ -260,7 +261,7 @@
             this.syncLogger = this.logger.CreateChildLogger("Sync");
             this.ReceivedIrcMessage += this.OnIrcMessageReceivedIrcEvent;
 
-            this.clientCapabilities = new List<string> {"sasl", "account-notify", "extended-join", "multi-prefix", "chghost", "cap-notify"};
+            this.clientCapabilities = new List<string> {"sasl", "account-notify", "extended-join", "multi-prefix", "chghost", "cap-notify", "account-tag"};
             
             this.userCache = new Dictionary<string, IrcUser>();
             this.channels = new Dictionary<string, IrcChannel>();
@@ -415,6 +416,7 @@
         public bool CapChghost => this.capChghost;
 
         public bool CapAccountNotify => this.capAccountNotify;
+        public bool CapAccountTag => this.capAccountTag;
 
         public bool CapCapNotify => this.capCapNotify;
 
@@ -1053,6 +1055,12 @@
                                 cachedUser.Username = user.Username;
                                 cachedUser.Hostname = user.Hostname;
                                 cachedUser.SkeletonStatus = IrcUserSkeletonStatus.PrefixOnly;
+                            }
+
+                            if (this.capAccountTag && e.Message.Tags.ContainsKey("account"))
+                            {
+                                cachedUser.Account = e.Message.Tags["account"];
+                                cachedUser.SkeletonStatus = IrcUserSkeletonStatus.Account;
                             }
 
                             user = cachedUser;
@@ -1811,6 +1819,9 @@
                             case "account-notify":
                                 this.capAccountNotify = adding;
                                 break;
+                            case "account-tag":
+                                this.capAccountTag = adding;
+                                break;
                             case "multi-prefix":
                                 this.capMultiPrefix = adding;
                                 break;
@@ -1873,6 +1884,9 @@
                                 break;
                             case "account-notify":
                                 this.capAccountNotify = false;
+                                break;
+                            case "account-tag":
+                                this.capAccountTag = false;
                                 break;
                             case "chghost":
                                 this.capChghost = false;
