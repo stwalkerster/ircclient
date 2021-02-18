@@ -21,5 +21,7 @@
         /// Gets the parameters.
         /// </summary>
         IEnumerable<string> Parameters { get; }
+        
+        IDictionary<string,string> Tags { get; }
     }
 }

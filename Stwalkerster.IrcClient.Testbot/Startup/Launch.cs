@@ -20,13 +20,14 @@
                 Component.For<IIrcConfiguration>()
                     .Instance(
                         new IrcConfiguration(
-                            hostname: "irc.freenode.net",
-                            port: 6667,
-                            authToServices: false,
+                            hostname: "niven.freenode.net",
+                            port: 9003,
+                            authToServices: true,
                             nickname: "stwtestbot",
                             username: "stwtestbot",
                             realName: "stwtestbot",
-                            ssl: false,
+                            password: "stwtestbot",
+                            ssl: true,
                             clientName: "TestClient",
                             restartOnHeavyLag: false
                         )));

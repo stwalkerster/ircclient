@@ -119,6 +119,60 @@
 
             this.DoParseTest(message, expected);
         }
+        
+        [Test]
+        public void ShouldParseCorrectlyTags1()
+        {
+            // arrange
+            string message = "@account=stwalkerster :stwalkerster!~stwalkers@wikerpedier/stwalkerster PRIVMSG ##stwalkerster :foo";
+            var expected = new Message(
+                "stwalkerster!~stwalkers@wikerpedier/stwalkerster",
+                "PRIVMSG",
+                new List<string>
+                {
+                    "##stwalkerster",
+                    "foo"
+                },
+                new Dictionary<string, string>{{"account", "stwalkerster"}});
+
+            this.DoParseTest(message, expected);
+        }
+        
+        [Test]
+        public void ShouldParseCorrectlyTags2()
+        {
+            // arrange
+            string message = "@account=stwalkerster;foo=bar :stwalkerster!~stwalkers@wikerpedier/stwalkerster PRIVMSG ##stwalkerster :foo";
+            var expected = new Message(
+                "stwalkerster!~stwalkers@wikerpedier/stwalkerster",
+                "PRIVMSG",
+                new List<string>
+                {
+                    "##stwalkerster",
+                    "foo"
+                },
+                new Dictionary<string, string> {{"account", "stwalkerster"}, {"foo", "bar"}});
+
+            this.DoParseTest(message, expected);
+        }
+        
+        [Test]
+        public void ShouldParseCorrectlyTags3()
+        {
+            // arrange
+            string message = "@account=stwalkerster\\spotato;foo=bar\\\\baz :stwalkerster!~stwalkers@wikerpedier/stwalkerster PRIVMSG ##stwalkerster :foo";
+            var expected = new Message(
+                "stwalkerster!~stwalkers@wikerpedier/stwalkerster",
+                "PRIVMSG",
+                new List<string>
+                {
+                    "##stwalkerster",
+                    "foo"
+                },
+                new Dictionary<string, string> {{"account", "stwalkerster potato"}, {"foo", "bar\\baz"}});
+
+            this.DoParseTest(message, expected);
+        }
 
         /// <summary>
         /// The do parse test.
@@ -138,6 +192,13 @@
             Assert.That(actual.Prefix, Is.EqualTo(expected.Prefix));
             Assert.That(actual.Command, Is.EqualTo(expected.Command));
             Assert.That(actual.Parameters, Is.EqualTo(expected.Parameters));
+            
+            Assert.That(actual.Tags.Count, Is.EqualTo(expected.Tags.Count));
+            foreach (var expectedKvp in expected.Tags)
+            {
+                Assert.That(actual.Tags.ContainsKey(expectedKvp.Key), Is.True);
+                Assert.That(actual.Tags[expectedKvp.Key], Is.EqualTo(expectedKvp.Value));
+            }
         }
     }
 }

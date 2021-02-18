@@ -163,7 +163,7 @@
                 new DataReceivedEventArgs(data));
             Action<string> o = data => networkClient.Verify(x => x.Send(data));
             
-            o("CAP LS");
+            o("CAP LS 302");
             i(":orwell.freenode.net CAP * LS :account-notify extended-join identify-msg multi-prefix sasl");
             o("CAP REQ :account-notify extended-join multi-prefix");
             i(":orwell.freenode.net CAP * ACK :account-notify extended-join multi-prefix ");
@@ -216,7 +216,7 @@
             Action<string> o = data => networkClient.Verify(x => x.Send(data));
             Action<string> op = data => networkClient.Verify(x => x.PrioritySend(It.Is<string>(s => s.StartsWith(data))));
             
-            o("CAP LS");
+            o("CAP LS 302");
             i(":orwell.freenode.net CAP * LS :account-notify extended-join identify-msg multi-prefix sasl");
             o("CAP REQ :account-notify extended-join multi-prefix");
             i(":orwell.freenode.net CAP * ACK :account-notify extended-join multi-prefix ");
@@ -241,7 +241,7 @@
             Assert.False(fired);
             op("PING ");
             Assert.False(fired);
-            Thread.Sleep(1000);
+            Thread.Sleep(2000);
             Assert.True(fired);
 
             networkClient.Verify(x => x.Disconnect(), Times.Once());
