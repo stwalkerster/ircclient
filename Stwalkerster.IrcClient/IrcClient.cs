@@ -970,6 +970,16 @@
                     user.SkeletonStatus = IrcUserSkeletonStatus.Account;
                 }
             }
+            
+            if (this.capAccountTag && e.Message.Tags.ContainsKey("account"))
+            {
+                // @account=stwalkerster :stwalkerster!stwalkerst@wikimedia/stwalkerster JOIN ##stwalkerster
+                if (user.SkeletonStatus < IrcUserSkeletonStatus.Account)
+                {
+                    user.Account = e.Message.Tags["account"];
+                    user.SkeletonStatus = IrcUserSkeletonStatus.Account;
+                }
+            }
 
             var channelName = parametersList[0];
             if (user.Nickname == this.Nickname)
@@ -1059,7 +1069,7 @@
 
                             if (this.capAccountTag && e.Message.Tags.ContainsKey("account"))
                             {
-                                cachedUser.Account = e.Message.Tags["account"];
+                                user.Account = e.Message.Tags["account"];
                                 cachedUser.SkeletonStatus = IrcUserSkeletonStatus.Account;
                             }
 
@@ -1369,6 +1379,15 @@
                         ircUser.Username = user.Username;
                         ircUser.Hostname = user.Hostname;
                         ircUser.SkeletonStatus = IrcUserSkeletonStatus.PrefixOnly;
+                    }
+                    
+                    if (this.capAccountTag && e.Message.Tags.ContainsKey("account"))
+                    {
+                        if (ircUser.SkeletonStatus < IrcUserSkeletonStatus.Account)
+                        {
+                            user.Account = e.Message.Tags["account"];
+                            ircUser.SkeletonStatus = IrcUserSkeletonStatus.Account;
+                        }
                     }
 
                     try
