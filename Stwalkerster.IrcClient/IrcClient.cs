@@ -178,6 +178,7 @@
         private bool capAccountNotify;
         private bool capCapNotify;
         private bool capAccountTag;
+        private bool capAwayNotify;
 
         /// <summary>
         /// The data interception function.
@@ -261,7 +262,11 @@
             this.syncLogger = this.logger.CreateChildLogger("Sync");
             this.ReceivedIrcMessage += this.OnIrcMessageReceivedIrcEvent;
 
-            this.clientCapabilities = new List<string> {"sasl", "account-notify", "extended-join", "multi-prefix", "chghost", "cap-notify", "account-tag"};
+            this.clientCapabilities = new List<string>
+            {
+                "sasl", "account-notify", "extended-join", "multi-prefix", "chghost", "cap-notify", "account-tag",
+                "away-notify"
+            };
             
             this.userCache = new Dictionary<string, IrcUser>();
             this.channels = new Dictionary<string, IrcChannel>();
@@ -419,6 +424,7 @@
         public bool CapAccountTag => this.capAccountTag;
 
         public bool CapCapNotify => this.capCapNotify;
+        public bool CapAwayNotify => this.capAwayNotify;
 
         #endregion
 
@@ -625,13 +631,7 @@
                 ((IDisposable) this.connectionRegistrationSemaphore).Dispose();
             }
         }
-
-        /// <summary>
-        /// The handle who x reply.
-        /// </summary>
-        /// <param name="message">
-        /// The message.
-        /// </param>
+        
         private void HandleWhoXReply(IMessage message)
         {
             try
@@ -729,15 +729,6 @@
             this.Disconnect("Network client connection lost.");
         }
         
-        /// <summary>
-        /// The network client on data received.
-        /// </summary>
-        /// <param name="sender">
-        /// The sender.
-        /// </param>
-        /// <param name="dataReceivedEventArgs">
-        /// The data received event args.
-        /// </param>
         private void NetworkClientOnDataReceived(object sender, DataReceivedEventArgs dataReceivedEventArgs)
         {
             var message = Message.Parse(dataReceivedEventArgs.Data);
@@ -1195,6 +1186,15 @@
                 {
                     var parameters = e.Message.Parameters.ToList();
                     inviteReceivedEvent(this, new InviteEventArgs(e.Message, user, parameters[1], parameters[0], this));
+                }
+            }
+
+            if (this.capAwayNotify && e.Message.Command == "AWAY")
+            {
+                var ircuser = (user as IrcUser);
+                if (ircuser != null)
+                {
+                    ircuser.Away = e.Message.Parameters.Any();
                 }
             }
         }
@@ -1850,6 +1850,9 @@
                             case "cap-notify":
                                 this.capCapNotify = adding;
                                 break;
+                            case "away-notify":
+                                this.capAwayNotify = adding;
+                                break;
                         }
                     }
 
@@ -1860,7 +1863,10 @@
                     else
                     {
                         this.Send(new Message("CAP", "END"));
-                        this.Send1459Registration();
+                        if (!this.connectionRegistered)
+                        {
+                            this.Send1459Registration();
+                        }
                     }
 
                     return true;
@@ -1912,6 +1918,9 @@
                                 break;
                             case "cap-notify":
                                 this.capCapNotify = false;
+                                break;
+                            case "away-notify":
+                                this.capAwayNotify = false;
                                 break;
                         }
                     }
