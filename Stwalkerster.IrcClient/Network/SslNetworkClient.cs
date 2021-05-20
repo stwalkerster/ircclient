@@ -37,7 +37,7 @@
 
             this.Logger.Info("Performing SSL Handshake...");
 
-            sslStream.AuthenticateAsClient(this.Hostname, new X509CertificateCollection(), SslProtocols.Tls, false);
+            sslStream.AuthenticateAsClient(this.Hostname, new X509CertificateCollection(), SslProtocols.Tls12, false);
 
             this.Reader = new StreamReader(sslStream);
             this.Writer = new StreamWriter(sslStream);
