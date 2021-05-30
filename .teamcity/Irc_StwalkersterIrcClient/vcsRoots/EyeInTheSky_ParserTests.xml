@@ -9,8 +9,8 @@
   <param name="submoduleCheckout" value="CHECKOUT" />
   <param name="teamcity:branchSpec" value="refs/heads/*" />
   <param name="teamcitySshKey" value="TeamCity key" />
-  <param name="url" value="ssh://git@phabricator.stwalkerster.co.uk/diffusion/73/helpmebot-parser-test-cases.git" />
-  <param name="useAlternates" value="true" />
+  <param name="url" value="git@github.com:stwalkerster/irc-parser-tests.git" />
+  <param name="useAlternates" value="USE_MIRRORS" />
   <param name="usernameStyle" value="EMAIL" />
 </vcs-root>
 
