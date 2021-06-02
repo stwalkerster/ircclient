@@ -19,6 +19,17 @@
     </vcs-settings>
     <requirements />
     <build-triggers />
+    <build-extensions>
+      <extension id="BUILD_EXT_12" type="commit-status-publisher">
+        <parameters>
+          <param name="github_authentication_type" value="token" />
+          <param name="github_host" value="https://api.github.com" />
+          <param name="publisherId" value="githubStatusPublisher" />
+          <param name="secure:github_access_token" value="credentialsJSON:80e6667c-1262-4618-a62d-54c869c2244c" />
+          <param name="vcsRootId" value="Irc_IRCclient" />
+        </parameters>
+      </extension>
+    </build-extensions>
     <cleanup />
   </settings>
 </build-type>
