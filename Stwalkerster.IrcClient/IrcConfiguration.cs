@@ -53,7 +53,7 @@
 
             if (username == null)
             {
-                realName = nickname;
+                username = nickname;
             }
 
             this.AuthToServices = authToServices;
