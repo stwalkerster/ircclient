@@ -18,7 +18,9 @@
             string servicesUsername = null,
             string servicesPassword = null,
             bool restartOnHeavyLag = true,
-            bool reclaimNickFromService = true
+            bool reclaimNickFromService = true,
+            int pingInterval = 15,
+            int missedPingLimit = 3
             )
         {
             if (hostname == null)
@@ -45,7 +47,7 @@
             {
                 throw new ArgumentOutOfRangeException("nickname");
             }
-
+            
             if (realName == null)
             {
                 realName = nickname;
@@ -67,6 +69,8 @@
             this.ClientName = clientName;
             this.RestartOnHeavyLag = restartOnHeavyLag;
             this.ReclaimNickFromServices = reclaimNickFromService;
+            this.PingInterval = pingInterval;
+            this.MissedPingLimit = missedPingLimit;
 
             this.ServicesUsername = servicesUsername;
             this.ServicesPassword = servicesPassword;
@@ -86,5 +90,7 @@
         public string ClientName { get; private set; }
         public bool RestartOnHeavyLag { get; private set; }
         public bool ReclaimNickFromServices { get; private set; }
+        public int PingInterval { get; }
+        public int MissedPingLimit { get; }
     }
 }

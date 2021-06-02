@@ -63,6 +63,10 @@
         string ServicesUsername { get; }
         string ServicesPassword { get; }
         
+        int PingInterval { get; }
+        int MissedPingLimit { get; }
+
+
         #endregion
     }
 }

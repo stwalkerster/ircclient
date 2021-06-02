@@ -219,6 +219,7 @@
         
         private readonly string servicesUsername;
         private readonly string servicesPassword;
+        private readonly int missedPingLimit;
 
         #endregion
 
@@ -279,8 +280,9 @@
             
             this.pingReplyEvent = new AutoResetEvent(false);
             this.pingThread = new Thread(this.PingThreadWorker);
-            this.PingInterval = 15;
-            this.PingTimeout = 15;
+            this.PingInterval = configuration.PingInterval;
+            this.PingTimeout = configuration.PingInterval;
+            this.missedPingLimit = configuration.MissedPingLimit;
 
             this.connectionRegistrationSemaphore = new Semaphore(0, 1);
             this.syncLogger.Debug("ctor() acquired connectionRegistration semaphore.");
@@ -1950,7 +1952,7 @@
         private void PingThreadWorker()
         {
             this.pingThreadAlive = true;
-            
+
             while (this.pingThreadAlive)
             {
                 var set = this.pingThreadTimerWait.WaitOne(TimeSpan.FromSeconds(this.PingInterval));
@@ -1983,10 +1985,10 @@
                 this.lagTimer++;
                 PingsMissed.WithLabels(this.ClientName).Inc();
 
-                if (this.lagTimer >= 3 && this.restartOnHeavyLag)
+                if (this.lagTimer >= this.missedPingLimit && this.restartOnHeavyLag)
                 {
                     this.networkClient.PrioritySend("QUIT :Unexpected heavy lag, restarting...");
-                    this.Disconnect("Heavy lag, three ping replies not recieved.");
+                    this.Disconnect($"Heavy lag, {this.missedPingLimit} ping replies not received.");
                 }
             }
             else
@@ -1997,7 +1999,7 @@
 
         private void PingThreadHandleNickChange()
         {
-            if (this.intendedNickname != this.nickname)
+            if (this.intendedNickname != this.nickname && this.reclaimNickFromServices)
             {
                 if (this.servicesLoggedIn)
                 {
