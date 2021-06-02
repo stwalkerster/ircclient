@@ -124,7 +124,7 @@
             this.IrcConfiguration.Setup(x => x.RealName).Returns("real name");
             this.IrcConfiguration.Setup(x => x.ClientName).Returns("client");
             this.IrcConfiguration.Setup(x => x.RestartOnHeavyLag).Returns(false);
-            this.IrcConfiguration.Setup(x => x.Password).Returns(password);
+            this.IrcConfiguration.Setup(x => x.ServerPassword).Returns(password);
             
             if (!string.IsNullOrEmpty(password))
             {

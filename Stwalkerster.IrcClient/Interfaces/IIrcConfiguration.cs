@@ -39,9 +39,9 @@
         string Username { get; }
 
         /// <summary>
-        ///     Gets the username.
+        ///     Gets the server password.
         /// </summary>
-        string Password { get; }
+        string ServerPassword { get; }
 
         /// <summary>
         ///     Gets a value indicating whether to connect with SSL.
@@ -59,6 +59,9 @@
         bool RestartOnHeavyLag { get; }
         
         bool ReclaimNickFromServices { get; }
+        
+        string ServicesUsername { get; }
+        string ServicesPassword { get; }
         
         #endregion
     }

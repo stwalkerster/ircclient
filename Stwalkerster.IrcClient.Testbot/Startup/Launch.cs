@@ -16,21 +16,24 @@
             
             var container = new WindsorContainer();
 
+            var libera = new IrcConfiguration(
+                hostname: "irc.libera.chat",
+                port: 6697,
+                authToServices: true,
+                nickname: "stwtestbot",
+                username: "stwtestbot",
+                realName: "stwtestbot",
+                servicesUsername: "stwtestbot",
+                servicesPassword: "stwtestbot",
+                ssl: true,
+                clientName: "TestClient",
+                restartOnHeavyLag: false
+            );
+
+            
             container.Register(
                 Component.For<IIrcConfiguration>()
-                    .Instance(
-                        new IrcConfiguration(
-                            hostname: "niven.freenode.net",
-                            port: 9003,
-                            authToServices: true,
-                            nickname: "stwtestbot",
-                            username: "stwtestbot",
-                            realName: "stwtestbot",
-                            password: "stwtestbot",
-                            ssl: true,
-                            clientName: "TestClient",
-                            restartOnHeavyLag: false
-                        )));
+                    .Instance(libera));
             
             container.Install(new Installer());
             

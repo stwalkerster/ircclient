@@ -129,7 +129,7 @@
         /// <summary>
         /// The password.
         /// </summary>
-        private readonly string password;
+        private readonly string serverPassword;
 
         /// <summary>
         /// The support helper.
@@ -217,6 +217,8 @@
         private readonly bool restartOnHeavyLag;
         private readonly bool reclaimNickFromServices;
         
+        private readonly string servicesUsername;
+        private readonly string servicesPassword;
 
         #endregion
 
@@ -250,8 +252,12 @@
             this.intendedNickname = configuration.Nickname;
             this.username = configuration.Username;
             this.realName = configuration.RealName;
-            this.password = configuration.Password;
+            this.serverPassword = configuration.ServerPassword;
+            
             this.authToServices = configuration.AuthToServices;
+            this.servicesUsername = configuration.ServicesUsername;
+            this.servicesPassword = configuration.ServicesPassword;
+            
             this.restartOnHeavyLag = configuration.RestartOnHeavyLag;
             this.reclaimNickFromServices = configuration.ReclaimNickFromServices;
 
@@ -2021,7 +2027,7 @@
             var list = message.Parameters.ToList();
             if (list[0] == "+")
             {
-                var authdata = string.Format("\0{0}\0{1}", this.username, this.password);
+                var authdata = string.Format("\0{0}\0{1}", this.servicesUsername, this.servicesPassword);
                 authdata = Convert.ToBase64String(Encoding.UTF8.GetBytes(authdata));
                 this.Send(new Message("AUTHENTICATE", authdata));
             }
@@ -2032,9 +2038,13 @@
         /// </summary>
         private void Send1459Registration()
         {
-            if (!this.capSasl && !string.IsNullOrEmpty(this.password) && this.authToServices)
+            if (!this.capSasl && !string.IsNullOrEmpty(this.servicesPassword) && this.authToServices && string.IsNullOrEmpty(this.serverPassword))
             {
-                this.Send(new Message("PASS", this.password));
+                this.Send(new Message("PASS", this.servicesPassword));
+            } 
+            else if (!string.IsNullOrEmpty(this.serverPassword))
+            {
+                this.Send(new Message("PASS", this.serverPassword));
             }
 
             this.Send(new Message("USER", new[] {this.username, "*", "*", this.realName}));
