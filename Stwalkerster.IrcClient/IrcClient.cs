@@ -548,6 +548,11 @@
             this.networkClient.Send(message.ToString());
         }
 
+        public void PrioritySend(IMessage message)
+        {
+            this.networkClient.PrioritySend(message.ToString());
+        }
+        
         /// <summary>
         /// The send message.
         /// </summary>
@@ -560,7 +565,7 @@
         /// <param name="destinationFlag">
         /// The destination flag.
         /// </param>
-        public void SendMessage(string destination, string message, DestinationFlags destinationFlag)
+        public void SendMessage(string destination, string message, DestinationFlags destinationFlag, bool priority)
         {
             this.WaitOnRegistration();
             
@@ -569,9 +574,24 @@
                 throw new OperationNotSupportedException("Message send requested with destination flag, but destination flag is not supported by this server.");
             }
 
-            this.Send(new Message("PRIVMSG", new[] { destination, message }));
+            var builtMessage = new Message("PRIVMSG", new[] { destination, message });
+            if (priority)
+            {
+                this.PrioritySend(builtMessage);
+            }
+            else
+            {
+                this.Send(builtMessage);
+            }
         }
 
+        public void SendMessage(string destination, string message, DestinationFlags destinationFlag)
+        {
+            this.WaitOnRegistration();
+            
+            this.SendMessage(destination, message, destinationFlag, false);
+        }
+        
         /// <summary>
         /// The send message.
         /// </summary>
@@ -585,7 +605,7 @@
         {
             this.WaitOnRegistration();
             
-            this.SendMessage(destination, message, null);
+            this.SendMessage(destination, message, null, false);
         }
 
         /// <summary>

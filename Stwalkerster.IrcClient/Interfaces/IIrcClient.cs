@@ -183,5 +183,7 @@
 
         event EventHandler<ChannelUserModeEventArgs> ChannelUserModeEvent;
         event EventHandler<EndOfWhoEventArgs> EndOfWhoEvent;
+        void PrioritySend(IMessage message);
+        void SendMessage(string destination, string message, DestinationFlags destinationFlag, bool priority);
     }
 }
