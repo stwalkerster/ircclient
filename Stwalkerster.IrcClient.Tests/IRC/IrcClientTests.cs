@@ -145,6 +145,7 @@
             this.IrcConfiguration.Setup(x => x.Nickname).Returns("nick");
             this.IrcConfiguration.Setup(x => x.Username).Returns("username");
             this.IrcConfiguration.Setup(x => x.RealName).Returns("real name");
+            this.IrcConfiguration.Setup(x => x.ClientName).Returns("client");
             this.IrcConfiguration.Setup(x => x.RestartOnHeavyLag).Returns(false);
             this.SupportHelper
                 .Setup(x => x.HandlePrefixMessageSupport(It.IsAny<string>(), It.IsAny<IDictionary<string, string>>()))
@@ -196,6 +197,7 @@
             this.IrcConfiguration.Setup(x => x.RealName).Returns("real name");
             this.IrcConfiguration.Setup(x => x.ClientName).Returns("client");
             this.IrcConfiguration.Setup(x => x.RestartOnHeavyLag).Returns(true);
+            this.IrcConfiguration.Setup(x => x.MissedPingLimit).Returns(3);
             this.SupportHelper
                 .Setup(x => x.HandlePrefixMessageSupport(It.IsAny<string>(), It.IsAny<IDictionary<string, string>>()))
                 .Callback(
