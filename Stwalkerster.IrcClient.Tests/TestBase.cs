@@ -36,7 +36,7 @@
             this.Logger = new Mock<ILogger>();
             this.Logger.Setup(x => x.CreateChildLogger(It.IsAny<string>())).Returns(this.Logger.Object);
 
-            this.Logger.Setup(x => x.Fatal(It.IsAny<string>())).Callback(() => Assert.Fail("Logger recorded fatal error."));
+            this.Logger.Setup(x => x.Fatal(It.IsAny<string>())).Callback<string>((s) => Assert.Fail("Logger recorded fatal error - " + s));
             this.Logger.Setup(x => x.Fatal(It.IsAny<string>(), It.IsAny<Exception>())).Callback(() => Assert.Fail("Logger recorded fatal error."));
             this.Logger.Setup(x => x.FatalFormat(It.IsAny<Exception>(), It.IsAny<string>(), It.IsAny<IEnumerable<object>>())).Callback(() => Assert.Fail("Logger recorded fatal error."));
             this.Logger.Setup(x => x.FatalFormat(It.IsAny<string>(), It.IsAny<IEnumerable<object>>())).Callback(() => Assert.Fail("Logger recorded fatal error.")); 
