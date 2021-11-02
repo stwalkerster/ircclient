@@ -2,9 +2,9 @@
 {
     using System;
     using System.Collections.Generic;
+    using Microsoft.Extensions.Logging;
     using Moq;
     using NUnit.Framework;
-    using ILogger = Castle.Core.Logging.ILogger;
     using Stwalkerster.IrcClient.Interfaces;
 
     /// <summary>
@@ -20,7 +20,7 @@
         /// <summary>
         /// Gets or sets the logger.
         /// </summary>
-        protected Mock<ILogger> Logger { get; set; }
+        protected Mock<ILogger<IrcClient>> Logger { get; set; }
         
         /// <summary>
         /// The SupportHelper mock
@@ -33,18 +33,14 @@
         [OneTimeSetUp]
         public void CommonSetup()
         {
-            this.Logger = new Mock<ILogger>();
-            this.Logger.Setup(x => x.CreateChildLogger(It.IsAny<string>())).Returns(this.Logger.Object);
-
-            this.Logger.Setup(x => x.Fatal(It.IsAny<string>())).Callback<string>((s) => Assert.Fail("Logger recorded fatal error - " + s));
-            this.Logger.Setup(x => x.Fatal(It.IsAny<string>(), It.IsAny<Exception>())).Callback(() => Assert.Fail("Logger recorded fatal error."));
-            this.Logger.Setup(x => x.FatalFormat(It.IsAny<Exception>(), It.IsAny<string>(), It.IsAny<IEnumerable<object>>())).Callback(() => Assert.Fail("Logger recorded fatal error."));
-            this.Logger.Setup(x => x.FatalFormat(It.IsAny<string>(), It.IsAny<IEnumerable<object>>())).Callback(() => Assert.Fail("Logger recorded fatal error.")); 
+            this.Logger = new Mock<ILogger<IrcClient>>();
+            // ReSharper disable TemplateIsNotCompileTimeConstantProblem
+            this.Logger.Setup(x => x.LogError(It.IsAny<string>())).Callback<string>((s) => Assert.Fail("Logger recorded error - " + s));
+            this.Logger.Setup(x => x.LogError(It.IsAny<Exception>(), It.IsAny<string>())).Callback(() => Assert.Fail("Logger recorded error."));
+            this.Logger.Setup(x => x.LogError(It.IsAny<Exception>(), It.IsAny<string>(), It.IsAny<IEnumerable<object>>())).Callback(() => Assert.Fail("Logger recorded error."));
+            this.Logger.Setup(x => x.LogError(It.IsAny<string>(), It.IsAny<IEnumerable<object>>())).Callback(() => Assert.Fail("Logger recorded error.")); 
             
-            this.Logger.Setup(x => x.Error(It.IsAny<string>())).Callback(() => Assert.Fail("Logger recorded error."));
-            this.Logger.Setup(x => x.Error(It.IsAny<string>(), It.IsAny<Exception>())).Callback(() => Assert.Fail("Logger recorded error."));
-            this.Logger.Setup(x => x.ErrorFormat(It.IsAny<Exception>(), It.IsAny<string>(), It.IsAny<IEnumerable<object>>())).Callback(() => Assert.Fail("Logger recorded error."));
-            this.Logger.Setup(x => x.ErrorFormat(It.IsAny<string>(), It.IsAny<IEnumerable<object>>())).Callback(() => Assert.Fail("Logger recorded error."));
+            // ReSharper restore TemplateIsNotCompileTimeConstantProblem
 
             this.IrcConfiguration = new Mock<IIrcConfiguration>();
             

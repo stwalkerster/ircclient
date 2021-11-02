@@ -4,7 +4,7 @@
     using System.Net.Security;
     using System.Security.Authentication;
     using System.Security.Cryptography.X509Certificates;
-    using Castle.Core.Logging;
+    using Microsoft.Extensions.Logging;
 
     /// <summary>
     /// The SSL network client.
@@ -23,7 +23,7 @@
         /// <param name="logger">
         /// The logger.
         /// </param>
-        public SslNetworkClient(string hostname, int port, ILogger logger)
+        public SslNetworkClient(string hostname, int port, ILogger<SslNetworkClient> logger)
             : base(hostname, port, logger)
         {
         }
@@ -35,7 +35,7 @@
             
             var sslStream = new SslStream(this.Client.GetStream());
 
-            this.Logger.Info("Performing SSL Handshake...");
+            this.Logger?.LogInformation("Performing SSL Handshake...");
 
             sslStream.AuthenticateAsClient(this.Hostname, new X509CertificateCollection(), SslProtocols.Tls12, false);
 

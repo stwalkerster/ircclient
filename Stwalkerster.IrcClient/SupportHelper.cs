@@ -2,7 +2,7 @@
 {
     using System.Collections.Generic;
     using System.Linq;
-    using Castle.Core.Logging;
+    using Microsoft.Extensions.Logging;
     using Stwalkerster.IrcClient.Interfaces;
 
     /// <summary>
@@ -13,7 +13,7 @@
         /// <summary>
         /// The logger.
         /// </summary>
-        private readonly ILogger logger;
+        private readonly ILogger<SupportHelper> logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SupportHelper"/> class.
@@ -21,7 +21,7 @@
         /// <param name="logger">
         /// The logger.
         /// </param>
-        public SupportHelper(ILogger logger)
+        public SupportHelper(ILogger<SupportHelper> logger)
         {
             this.logger = logger;
         }
@@ -45,7 +45,7 @@
             var symbols = strings[2];
             if (modes.Length != symbols.Length)
             {
-                this.logger.ErrorFormat("RPL_ISUPPORT PREFIX not valid: {0}", prefixMessage);
+                this.logger.LogError("RPL_ISUPPORT PREFIX not valid: {0}", prefixMessage);
                 return;
             }
 

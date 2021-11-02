@@ -15,6 +15,8 @@
     <ItemGroup>
       <PackageReference Include="Castle.Core-log4net" Version="4.4.1" />
       <PackageReference Include="Castle.LoggingFacility" Version="4.1.1" />
+      <PackageReference Include="Castle.Windsor" Version="4.1.1" />
+      <PackageReference Include="Microsoft.Extensions.Logging.Log4Net.AspNetCore" Version="5.0.4" />
     </ItemGroup>
 
     <ItemGroup>

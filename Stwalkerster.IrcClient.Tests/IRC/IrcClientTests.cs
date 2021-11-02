@@ -3,9 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Threading;
-
-    using Castle.Core.Logging;
-
+    using Microsoft.Extensions.Logging;
     using Moq;
     using NUnit.Framework;
     using Stwalkerster.IrcClient.Events;
@@ -137,8 +135,7 @@
         [Test]
         public void TestDisconnectEventRaised()
         {
-            var logger = new Mock<ILogger>();
-            logger.Setup(x => x.CreateChildLogger(It.IsAny<string>())).Returns(logger.Object);
+            var logger = new Mock<ILogger<IrcClient>>();
             
             // arrange
             var networkClient = new Mock<INetworkClient>();
@@ -189,8 +186,7 @@
         [Test]
         public void TestDisconnectEventRaisedOnTimeout()
         {
-            var logger = new Mock<ILogger>();
-            logger.Setup(x => x.CreateChildLogger(It.IsAny<string>())).Returns(logger.Object);
+            var logger = new Mock<ILogger<IrcClient>>();
             
             // arrange
             var networkClient = new Mock<INetworkClient>();

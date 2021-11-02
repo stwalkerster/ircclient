@@ -5,7 +5,7 @@
     using System.IO;
     using System.Net.Sockets;
     using System.Threading;
-    using Castle.Core.Logging;
+    using Microsoft.Extensions.Logging;
     using Prometheus;
     using Stwalkerster.IrcClient.Events;
     using Stwalkerster.IrcClient.Interfaces;
@@ -48,10 +48,7 @@
         public event EventHandler<EventArgs> Disconnected;
 
         private readonly TcpClient client;
-
-        private readonly ILogger inboundLogger;
-        private readonly ILogger outboundLogger;
-
+        
         private readonly LinkedList<string> sendQueue;
         private readonly object sendQueueLock = new object();
 
@@ -75,13 +72,11 @@
         /// <param name="logger">
         ///     The logger.
         /// </param>
-        public NetworkClient(string hostname, int port, ILogger logger)
+        public NetworkClient(string hostname, int port, ILogger<NetworkClient> logger)
         {
             this.Hostname = hostname;
             this.Port = port;
             this.Logger = logger;
-            this.inboundLogger = logger.CreateChildLogger("Inbound");
-            this.outboundLogger = logger.CreateChildLogger("Outbound");
 
             this.sendQueue = new LinkedList<string>();
             this.client = new TcpClient();
@@ -114,12 +109,12 @@
         protected StreamReader Reader { get; set; }
         protected StreamWriter Writer { get; set; }
 
-        protected ILogger Logger { get; private set; }
+        protected ILogger<NetworkClient> Logger { get; private set; }
 
         /// <inheritdoc />
         public void Disconnect()
         {
-            this.Logger.Info("Disconnecting network socket.");
+            this.Logger?.LogInformation("Disconnecting network socket");
             
             try
             {
@@ -128,11 +123,11 @@
             }
             catch (IOException ex)
             {
-                this.Logger.Debug("Error disposing writer and stream.", ex);
+                this.Logger?.LogDebug(ex, "Error disposing writer and stream");
             }
             catch (ObjectDisposedException)
             {
-                this.Logger.Debug("Writer stream already disposed.");
+                this.Logger?.LogDebug("Writer stream already disposed");
             }
 
             this.alive = false;
@@ -143,11 +138,11 @@
             }
             catch (IOException ex)
             {
-                this.Logger.Debug("Error closing socket.", ex);
+                this.Logger?.LogDebug(ex, "Error closing socket");
             }
             catch (ObjectDisposedException)
             {
-                this.Logger.Debug("Socket already disposed.");
+                this.Logger?.LogDebug("Socket already disposed");
             }
         }
 
@@ -159,7 +154,7 @@
 
         protected void Connect(bool startThreads)
         {
-            this.Logger.InfoFormat("Connecting to socket tcp://{0}:{1}/ ...", this.Hostname, this.Port);
+            this.Logger?.LogInformation("Connecting to socket tcp://{Hostname}:{Port}/ ...", this.Hostname, this.Port);
 
             this.client.Connect(this.Hostname, this.Port);
 
@@ -240,7 +235,7 @@
 
         protected void StartThreads()
         {
-            this.Logger.InfoFormat("Initialising reader/writer threads");
+            this.Logger?.LogInformation("Initialising reader/writer threads");
 
             this.readerThread.Start();
             this.writerThread.Start();
@@ -256,7 +251,7 @@
 
                     if (data != null)
                     {
-                        this.inboundLogger.Debug(data);
+                        this.Logger?.LogDebug("> {Data}", data);
                         
                         MessagesReceived.WithLabels($"{Hostname}:{Port}").Inc();
                         MessageBytesReceived.WithLabels($"{Hostname}:{Port}").Inc(data.Length);
@@ -265,23 +260,23 @@
                     }
                 }
                 
-                this.Logger.Debug("Reader thread no longer connected");    
+                this.Logger?.LogDebug("Reader thread no longer connected");    
             }
             catch (IOException ex)
             {
-                this.Logger.Error("IO error on read from network stream", ex);
+                this.Logger?.LogError(ex, "IO error on read from network stream");
             }
             catch (SocketException ex)
             {
-                this.Logger.Error("Socket error on read from network stream", ex);
+                this.Logger?.LogError(ex, "Socket error on read from network stream");
             }
             catch (ObjectDisposedException ex)
             {
-                this.Logger.Fatal("Object disposed", ex);
+                this.Logger?.LogError(ex, "Object disposed");
             }
             catch (Exception ex)
             {
-                this.Logger.Error("Unhandled reader thread exception", ex);
+                this.Logger?.LogError(ex, "Unhandled reader thread exception");
                 throw;
             }
             finally
@@ -289,7 +284,7 @@
                 this.alive = false;
                 this.client.Close();
 
-                this.Logger.Debug("Firing disconnect event from reader thread!");    
+                this.Logger?.LogDebug("Firing disconnect event from reader thread!");    
                 this.FireDisconnectedEvent();
             }
         }
@@ -326,7 +321,7 @@
                             continue;
                         }
 
-                        this.outboundLogger.Debug(item);
+                        this.Logger?.LogDebug("< {Data}", item);
 
                         MessagesSent.WithLabels($"{Hostname}:{Port}").Inc();
                         MessageBytesSent.WithLabels($"{Hostname}:{Port}").Inc(item.Length);
@@ -339,23 +334,23 @@
                     }
                 }
 
-                this.Logger.Debug("Writer thread no longer connected");
+                this.Logger?.LogDebug("Writer thread no longer connected");
             }
             catch (IOException ex)
             {
-                this.Logger.Error("IO error on read from network stream", ex);
+                this.Logger?.LogError(ex, "IO error on read from network stream");
             }
             catch (SocketException ex)
             {
-                this.Logger.Error("Socket error on read from network stream", ex);
+                this.Logger?.LogError(ex, "Socket error on read from network stream");
             }
             catch (ObjectDisposedException ex)
             {
-                this.Logger.Fatal("Object disposed", ex);
+                this.Logger?.LogError(ex, "Object disposed");
             }
             catch (Exception ex)
             {
-                this.Logger.Error("Unhandled writer thread exception", ex);
+                this.Logger?.LogError(ex, "Unhandled writer thread exception");
                 throw;
             }
             finally
@@ -363,7 +358,7 @@
                 this.alive = false;
                 this.client.Close();
 
-                this.Logger.Debug("Firing disconnect event from writer thread!");    
+                this.Logger?.LogDebug("Firing disconnect event from writer thread!");    
                 this.FireDisconnectedEvent();
             }
         }

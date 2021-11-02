@@ -8,8 +8,7 @@
     using System.Security;
     using System.Text;
     using System.Threading;
-
-    using Castle.Core.Logging;
+    using Microsoft.Extensions.Logging;
     using Prometheus;
     using Stwalkerster.IrcClient.Events;
     using Stwalkerster.IrcClient.Exceptions;
@@ -17,7 +16,6 @@
     using Stwalkerster.IrcClient.Messages;
     using Stwalkerster.IrcClient.Model;
     using Stwalkerster.IrcClient.Model.Interfaces;
-    using Stwalkerster.IrcClient.Network;
 
     /// <summary>
     /// The IRC client.
@@ -119,7 +117,7 @@
         /// <summary>
         /// The logger.
         /// </summary>
-        private readonly ILogger logger;
+        private readonly ILogger<IrcClient> logger;
 
         /// <summary>
         /// The network client.
@@ -140,11 +138,6 @@
         /// The real name.
         /// </summary>
         private readonly string realName;
-
-        /// <summary>
-        /// The sync logger.
-        /// </summary>
-        private readonly ILogger syncLogger;
 
         /// <summary>
         /// The user cache.
@@ -234,7 +227,7 @@
 
             if (!this.authToServices)
             {
-                this.logger.Warn("Services authentication is disabled!");
+                this.logger.LogWarning("Services authentication is disabled!");
 
                 this.clientCapabilities.Remove("sasl");
             }
@@ -242,12 +235,12 @@
             this.RegisterConnection(null);
         }
 
-        public IrcClient(ILogger logger, IIrcConfiguration configuration, ISupportHelper supportHelper)
-            : this(null, logger, configuration, supportHelper)
+        public IrcClient(ILoggerFactory loggerFactory, IIrcConfiguration configuration, ISupportHelper supportHelper)
+            : this(NetworkClientFactory.Create(configuration, loggerFactory), loggerFactory.CreateLogger<IrcClient>(), configuration, supportHelper)
         {
         }
 
-        public IrcClient(INetworkClient client, ILogger logger, IIrcConfiguration configuration, ISupportHelper supportHelper)
+        public IrcClient(INetworkClient client, ILogger<IrcClient> logger, IIrcConfiguration configuration, ISupportHelper supportHelper)
         {
             this.nickname = configuration.Nickname;
             this.intendedNickname = configuration.Nickname;
@@ -264,9 +257,8 @@
 
             this.supportHelper = supportHelper;
             this.ClientName = configuration.ClientName;
-            this.logger = logger.CreateChildLogger(this.ClientName);
+            this.logger = logger;
 
-            this.syncLogger = this.logger.CreateChildLogger("Sync");
             this.ReceivedIrcMessage += this.OnIrcMessageReceivedIrcEvent;
 
             this.clientCapabilities = new List<string>
@@ -285,25 +277,6 @@
             this.missedPingLimit = configuration.MissedPingLimit;
 
             this.connectionRegistrationSemaphore = new Semaphore(0, 1);
-            this.syncLogger.Debug("ctor() acquired connectionRegistration semaphore.");
-
-            if (client == null)
-            {
-                if (configuration.Ssl)
-                {
-                    client = new SslNetworkClient(
-                        configuration.Hostname,
-                        configuration.Port,
-                        this.logger.CreateChildLogger("NetworkClient"));
-                }
-                else
-                {
-                    client = new NetworkClient(
-                        configuration.Hostname,
-                        configuration.Port,
-                        this.logger.CreateChildLogger("NetworkClient"));
-                }
-            }
 
             this.Setup(client);
         }
@@ -487,11 +460,8 @@
                 throw new SecurityException("Not allowed to part all with JOIN 0");
             }
 
-            this.syncLogger.DebugFormat("Join({0}) waiting on connectionRegistration semaphore.", channel);
             this.connectionRegistrationSemaphore.WaitOne();
-            this.syncLogger.DebugFormat("Join({0}) acquired on connectionRegistration semaphore.", channel);
             this.connectionRegistrationSemaphore.Release();
-            this.syncLogger.DebugFormat("Join({0}) released connectionRegistration semaphore.", channel);
 
             // request to join
             this.Send(new Message("JOIN", channel));
@@ -552,7 +522,7 @@
         {
             this.networkClient.PrioritySend(message.ToString());
         }
-        
+
         /// <summary>
         /// The send message.
         /// </summary>
@@ -564,6 +534,9 @@
         /// </param>
         /// <param name="destinationFlag">
         /// The destination flag.
+        /// </param>
+        /// <param name="priority">
+        /// Whether to treat this as a priority message
         /// </param>
         public void SendMessage(string destination, string message, DestinationFlags destinationFlag, bool priority)
         {
@@ -732,7 +705,7 @@
             catch (Exception ex)
             {
                 this.nickTrackingValid = false;
-                this.logger.Error("Nick tracking for authentication is no longer valid.", ex);
+                this.logger.LogError(ex, "Nick tracking for authentication is no longer valid");
                 throw;
             }
         }
@@ -743,7 +716,7 @@
             var messageParameters = message.Parameters.ToList();
             var channel = messageParameters[1];
             
-            this.logger.Debug($"End of /WHOX for {channel}");
+            this.logger.LogDebug(message: "End of /WHOX for {Channel}", channel);
             
             var whoEvent = this.EndOfWhoEvent;
             if (whoEvent != null)
@@ -807,14 +780,14 @@
             this.pingThreadAlive = false;
             this.pingThreadTimerWait.Set();
 
-            this.logger.Fatal(errorMessage);
+            this.logger.LogError("Disconnecting: {DisconnectReason}", errorMessage);
             this.networkClient.Disconnect();
 
             // Invoke the disconnected event
             var temp = this.DisconnectedEvent;
             if (temp != null)
             {
-                temp(this, new EventArgs());
+                temp(this, EventArgs.Empty);
             }
         }
 
@@ -842,7 +815,7 @@
 
             lock (this.userOperationLock)
             {
-                this.logger.DebugFormat("Seen {0} change account name to {1}", user, parameters[0]);
+                this.logger.LogDebug("Seen {User} change account name to {Parameters}", user, parameters[0]);
                 if (this.userCache.ContainsKey(user.Nickname))
                 {
                     var cachedUser = this.userCache[user.Nickname];
@@ -896,7 +869,7 @@
                     {
                         channelUser = this.channels[channel].Users[nick];
 
-                        this.logger.InfoFormat("Seen {0}{2} on {1} by {3}.", addMode ? "+" : "-", channelUser, c, actingUser);
+                        this.logger.LogInformation("Seen {AddMode}{Mode} on {User} by {ActingUser}", addMode ? "+" : "-", c, channelUser, actingUser);
 
                         this.modeMapping[c.ToString()](channelUser, addMode);
                         
@@ -932,7 +905,7 @@
             }
             catch (KeyNotFoundException ex)
             {
-                this.logger.Debug("Unable to update metrics due to missing username in channel info - are we joining an empty channel?", ex);
+                this.logger.LogDebug(ex, "Unable to update metrics due to missing username in channel info - are we joining an empty channel?");
             }
         }
 
@@ -1004,30 +977,30 @@
             if (user.Nickname == this.Nickname)
             {
                 // we're joining this, so rate-limit from here.
-                this.logger.InfoFormat("Joining channel {0}", channelName);
-                this.logger.Debug("Requesting WHOX a information");
+                this.logger.LogInformation("Joining channel {Channel}", channelName);
+                this.logger.LogDebug("Requesting WHOX a information for {Channel}", channelName);
                 this.Send(new Message("WHO", new[] {channelName, "%uhnatfc,001"}));
 
-                this.logger.Debug("Requesting MODE information");
+                this.logger.LogDebug("Requesting MODE information for {Channel}", channelName);
                 this.Send(new Message("MODE", new[] {channelName}));
 
                 lock (this.userOperationLock)
                 {
                     // add the channel to the list of channels I'm in.
-                    this.logger.DebugFormat("Adding {0} to the list of channels I'm in.", channelName);
+                    this.logger.LogDebug("Adding {Channel} to the list of channels I'm in", channelName);
                     this.Channels.Add(channelName, new IrcChannel(channelName));
                     ChannelsJoined.WithLabels(this.ClientName).Set(this.channels.Count);
                 }
             }
             else
             {
-                this.logger.InfoFormat("Seen {0} join channel {1}.", user, channelName);
+                this.logger.LogInformation("Seen {User} join channel {Channel}", user, channelName);
 
                 lock (this.userOperationLock)
                 {
                     if (!this.Channels[channelName].Users.ContainsKey(user.Nickname))
                     {
-                        this.logger.DebugFormat("Adding user {0} to the list of users in channel {1}", user, channelName);
+                        this.logger.LogDebug("Adding user {User} to the list of users in channel {Channel}", user, channelName);
                         this.Channels[channelName]
                             .Users.Add(
                                 user.Nickname,
@@ -1036,7 +1009,7 @@
                     }
                     else
                     {
-                        this.logger.Error("Nickname tracking no longer valid.");
+                        this.logger.LogError("Nickname tracking no longer valid");
                         this.nickTrackingValid = false;
                     }
                 }
@@ -1133,7 +1106,7 @@
 
             if (e.Message.Command == Numerics.WhoXReply)
             {
-                this.logger.DebugFormat("WHOX Reply:{0}", string.Join(" ", e.Message.Parameters));
+                this.logger.LogDebug("WHOX Reply:{WhoX}", string.Join(" ", e.Message.Parameters));
                 this.HandleWhoXReply(e.Message);
             }
 
@@ -1153,13 +1126,13 @@
                 var target = parameters[0];
                 if (target.StartsWith("#"))
                 {
-                    this.logger.Debug("Received channel mode message");
+                    this.logger.LogDebug("Received channel mode message");
                     this.OnChannelModeReceived(parameters, user);
                 }
                 else
                 {
                     // User mode message
-                    this.logger.Debug("Received user mode message. Not processing.");
+                    this.logger.LogDebug("Received user mode message - not processing");
                 }
 
                 var modeEvent = this.ModeReceivedEvent;
@@ -1235,7 +1208,7 @@
             
             var oldNickname = user.Nickname;
             
-            this.logger.InfoFormat("Changing user/host of {0} to {1}@{2} in nick tracking database.", oldNickname, newUser, newHost);
+            this.logger.LogInformation("Changing user/host of {OldNick} to {NewUser}@{NewHost} in nick tracking database", oldNickname, newUser, newHost);
 
             try
             {
@@ -1256,7 +1229,7 @@
             }
             catch (Exception ex)
             {
-                this.logger.Error("Nickname tracking is no longer valid.", ex);
+                this.logger.LogError(ex, "Nickname tracking is no longer valid");
                 this.nickTrackingValid = false;
             }
         }
@@ -1320,7 +1293,7 @@
             var channel = parameters[2];
             var names = parameters[3];
 
-            this.logger.DebugFormat("Names on {0}: {1}", channel, names);
+            this.logger.LogDebug("Names on {Channel}: {Names}", channel, names);
 
             foreach (var name in names.Split(' '))
             {
@@ -1387,11 +1360,11 @@
 
             if (this.nickname == oldNickname)
             {
-                this.logger.InfoFormat("Updating my nickname from {0} to {1}!", oldNickname, newNickname);
+                this.logger.LogInformation("Updating my nickname from {OldNick} to {NewNick}", oldNickname, newNickname);
                 this.nickname = newNickname;
             }
             
-            this.logger.InfoFormat("Changing {0} to {1} in nick tracking database.", oldNickname, newNickname);
+            this.logger.LogInformation("Changing {OldNick} to {NewNick} in nick tracking database", oldNickname, newNickname);
 
             try
             {
@@ -1427,8 +1400,8 @@
                     }
                     catch (ArgumentException)
                     {
-                        this.logger.Warn(
-                            "Couldn't add the new entry to the dictionary. Nick tracking is no longer valid.");
+                        this.logger.LogWarning(
+                            "Couldn't add the new entry to the dictionary - nick tracking is no longer valid");
                         this.nickTrackingValid = false;
                         throw;
                     }
@@ -1442,13 +1415,12 @@
 
                             if (!channelUser.User.Equals(ircUser))
                             {
-                                this.logger.ErrorFormat(
-                                    "Channel user {0} doesn't match irc user {1} for NICK in {2}",
+                                this.logger.LogError(
+                                    "Channel user {ChannelUser} doesn't match irc user {IrcUser} for NICK in {Channel} - ick tracking is no longer valid",
                                     channelUser.User,
                                     ircUser,
                                     channelPair.Value.Name);
 
-                                this.logger.Error("Nick tracking is no longer valid.");
                                 this.nickTrackingValid = false;
 
                                 throw new Exception("Channel user doesn't match irc user");
@@ -1461,8 +1433,8 @@
                             }
                             catch (ArgumentException)
                             {
-                                this.logger.Warn(
-                                    "Couldn't add the new entry to the dictionary. Nick tracking is no longer valid.");
+                                this.logger.LogWarning(
+                                    "Couldn't add the new entry to the dictionary - nick tracking is no longer valid");
                                 this.nickTrackingValid = false;
                                 throw;
                             }
@@ -1472,7 +1444,7 @@
             }
             catch (Exception exception)
             {
-                this.logger.Error("Nickname tracking is no longer valid.", exception);
+                this.logger.LogError(exception, "Nick tracking is no longer valid");
                 this.nickTrackingValid = false;
             }
 
@@ -1498,18 +1470,14 @@
             var channel = parameters[0];
             if (user.Nickname == this.Nickname)
             {
-                this.logger.InfoFormat("Leaving channel {1}.", user, channel);
+                this.logger.LogInformation("{Nickname} Leaving channel {Channel}", user, channel);
 
                 lock (this.userOperationLock)
                 {
                     var channelUsers = this.channels[channel].Users.Select(x => x.Key);
                     foreach (var u in channelUsers.Where(u => this.channels.Count(x => x.Value.Users.ContainsKey(u)) == 0))
                     {
-                        this.logger.InfoFormat(
-                            "{0} is no longer in any channel I'm in, removing them from tracking",
-                            u,
-                            channel);
-
+                        this.logger.LogDebug("{User} is no longer in any channel I'm in, removing them from tracking", u);
                         this.userCache.Remove(u);
                     }
                     
@@ -1527,15 +1495,11 @@
                 {
                     this.channels[channel].Users.Remove(user.Nickname);
 
-                    this.logger.InfoFormat("{0} has left channel {1}.", user, channel);
+                    this.logger.LogInformation("{User} has left channel {Channel}", user, channel);
 
                     if (this.channels.Count(x => x.Value.Users.ContainsKey(user.Nickname)) == 0)
                     {
-                        this.logger.InfoFormat(
-                            "{0} has left all channels I'm in, removing them from tracking",
-                            user,
-                            channel);
-
+                        this.logger.LogDebug("{User} has left all channels I'm in, removing them from tracking", user);
                         this.userCache.Remove(user.Nickname);
                         
                         UsersKnown.WithLabels(this.ClientName).Set(this.userCache.Count);
@@ -1567,7 +1531,7 @@
             var channel = parameters[0];
             if (parameters[1] == this.Nickname)
             {
-                this.logger.WarnFormat("Kicked from channel {0}.", channel);
+                this.logger.LogWarning("Kicked from channel {Channel}", channel);
 
                 lock (this.userOperationLock)
                 {
@@ -1575,17 +1539,13 @@
                     var channelsWithUser = channelUsers.Where(u => this.channels.Count(x => x.Value.Users.ContainsKey(u)) == 0);
                     foreach (var u in channelsWithUser)
                     {
-                        this.logger.InfoFormat(
-                            "{0} is no longer in any channel I'm in, removing them from tracking",
-                            u,
-                            channel);
-
+                        this.logger.LogDebug("{User} is no longer in any channel I'm in, removing them from tracking", u);
                         this.userCache.Remove(u);
                     }
                     
                     UsersKnown.WithLabels(this.ClientName).Set(this.userCache.Count);
 
-                    this.logger.DebugFormat("Removing {0} from channel list", channel);
+                    this.logger.LogDebug("Removing {Channel} from channel list", channel);
                     this.channels.Remove(channel);
                     ChannelsJoined.WithLabels(this.ClientName).Set(this.channels.Count);
                     ChannelUsers.WithLabels(this.ClientName, channel).Unpublish();
@@ -1603,15 +1563,11 @@
                 {
                     this.channels[channel].Users.Remove(parameters[1]);
 
-                    this.logger.InfoFormat("{0} has beem kicked from channel {1}.", parameters[1], channel);
+                    this.logger.LogInformation("{User} has been kicked from channel {Channel}", parameters[1], channel);
 
                     if (this.channels.Count(x => x.Value.Users.ContainsKey(parameters[1])) == 0)
                     {
-                        this.logger.InfoFormat(
-                            "{0} has left all channels I'm in, removing them from tracking",
-                            parameters[1],
-                            channel);
-
+                        this.logger.LogDebug("{User} has left all channels I'm in, removing them from tracking", parameters[1]);
                         this.userCache.Remove(parameters[1]);
                         UsersKnown.WithLabels(this.ClientName).Set(this.userCache.Count);
                     }
@@ -1629,7 +1585,7 @@
 
         private void OnQuitMessageReceived(IrcMessageReceivedEventArgs e, IUser user)
         {
-            this.logger.InfoFormat("{0} has left IRC.", user);
+            this.logger.LogInformation("{User} has left IRC", user);
 
             lock (this.userOperationLock)
             {
@@ -1680,7 +1636,7 @@
                 if (this.clientCapabilities.Count == 0)
                 {
                     // we don't support capabilities, so don't go through the CAP cycle.
-                    this.logger.InfoFormat("I support no capabilities.");
+                    this.logger.LogInformation("I support no capabilities");
 
                     this.Send(new Message("CAP", "END"));
                     this.Send1459Registration();
@@ -1704,7 +1660,7 @@
             // welcome to IRC!
             if (message.Command == Numerics.Welcome)
             {
-                this.logger.Info("Connection registration succeeded");
+                this.logger.LogInformation("Connection registration succeeded");
                 this.serverPrefix = message.Prefix;
 
                 this.pingThread.Start();
@@ -1714,7 +1670,6 @@
                 
                 this.connectionRegistered = true;
                 this.connectionRegistrationSemaphore.Release();
-                this.syncLogger.Debug("RegisterConnection() released connectionRegistration semaphore.");
 
                 this.RaiseDataEvent(message);
                 return;
@@ -1723,7 +1678,7 @@
             // nickname in use
             if ((message.Command == Numerics.NicknameInUse) || (message.Command == Numerics.UnavailableResource))
             {
-                this.logger.Warn("Nickname in use, retrying.");
+                this.logger.LogWarning("Nickname {Nick} in use, retrying...", this.nickname);
                 this.nickname = this.nickname + "_";
                 this.Send(new Message("NICK", this.nickname));
                 return;
@@ -1739,14 +1694,14 @@
             if (message.Command == Numerics.SaslLoggedIn)
             {
                 var strings = message.Parameters.ToArray();
-                this.logger.InfoFormat("You are now logged in as {1} ({0})", strings[1], strings[2]);
+                this.logger.LogInformation("You are now logged in as {0} ({1})", strings[2], strings[1]);
                 this.servicesLoggedIn = true;
                 return;
             }
 
             if (message.Command == Numerics.SaslSuccess)
             {
-                this.logger.InfoFormat("SASL Login succeeded.");
+                this.logger.LogInformation("SASL Login succeeded");
 
                 // logged in, continue with registration
                 this.Send(new Message("CAP", "END"));
@@ -1756,7 +1711,7 @@
 
             if (message.Command == Numerics.SaslAuthFailed)
             {
-                this.logger.Fatal("SASL Login failed.");
+                this.logger.LogError("SASL Login failed");
 
                 // not logged in, cancel sasl auth.
                 this.Send(new Message("QUIT"));
@@ -1765,7 +1720,7 @@
 
             if (message.Command == Numerics.SaslAborted)
             {
-                this.logger.WarnFormat("SASL Login aborted.");
+                this.logger.LogWarning("SASL Login aborted");
 
                 // not logged in, cancel sasl auth.
                 this.Send(new Message("CAP", "END"));
@@ -1773,7 +1728,7 @@
                 return;
             }
 
-            this.logger.ErrorFormat("How did I get here? ({0} recieved)", message.Command);
+            this.logger.LogError("How did I get here? ({Command} received)", message.Command);
         }
 
         private bool HandleCapabilityNegotiation(IMessage message)
@@ -1792,8 +1747,8 @@
                     }
 
                     this.serverCapabilities.AddRange(list[2].Split(' '));
-                    this.logger.DebugFormat("Server Capabilities: {0}", string.Join(", ", this.ServerCapabilities));
-                    this.logger.DebugFormat("Client Capabilities: {0}", string.Join(", ", this.clientCapabilities));
+                    this.logger.LogDebug("Server Capabilities: {Capabilities}", string.Join(", ", this.ServerCapabilities));
+                    this.logger.LogDebug("Client Capabilities: {Capabilities}", string.Join(", ", this.clientCapabilities));
 
                     var parsedServerCaps =
                         this.serverCapabilities.Select(x => x.Contains("=") ? x.Substring(0, x.IndexOf("=", StringComparison.Ordinal)) : x);
@@ -1803,8 +1758,7 @@
                     // We don't support one without the other!
                     if (caps.Intersect(new[] {"account-notify", "extended-join"}).Count() == 1)
                     {
-                        this.logger.Warn(
-                            "Dropping account-notify and extended-join support since server only supports one of them!");
+                        this.logger.LogWarning("Dropping account-notify and extended-join support since server only supports one of them");
                         caps.Remove("account-notify");
                         caps.Remove("extended-join");
                     }
@@ -1824,7 +1778,7 @@
                     if (caps.Count == 0)
                     {
                         // nothing is suitable for us, so downgrade to 1459
-                        this.logger.InfoFormat("Requesting no capabilities.");
+                        this.logger.LogInformation("Requesting no capabilities");
 
                         this.Send(new Message("CAP", "END"));
                         this.Send1459Registration();
@@ -1832,7 +1786,7 @@
                         return true;
                     }
 
-                    this.logger.InfoFormat("Requesting capabilities: {0}", string.Join(", ", caps));
+                    this.logger.LogInformation("Requesting capabilities: {Capabilities}", string.Join(", ", caps));
 
                     this.Send(new Message("CAP", new[] {"REQ", string.Join(" ", caps)}));
 
@@ -1842,7 +1796,7 @@
                 if (list[1] == "ACK")
                 {
                     var caps = list[2].Split(new[]{' '}, StringSplitOptions.RemoveEmptyEntries);
-                    this.logger.InfoFormat("Acknowledged capabilities: {0}", string.Join(", ", caps));
+                    this.logger.LogInformation("Acknowledged capabilities: {Capabilities}", string.Join(", ", caps));
 
                     foreach (var cap in caps)
                     {
@@ -1904,7 +1858,7 @@
                 {
                     // something went wrong, so downgrade to 1459.
                     var caps = list[2].Split(' ');
-                    this.logger.WarnFormat("NOT Acked capabilities: {0}", string.Join(", ", caps));
+                    this.logger.LogWarning("NOT Acked capabilities: {Capabilities}", string.Join(", ", caps));
 
                     this.Send(new Message("CAP", "END"));
                     this.Send1459Registration();
@@ -1980,7 +1934,7 @@
                 if (set)
                 {
                     // we've been told to check our current status immediately.
-                    this.logger.Debug("Ping thread skipping wait");
+                    this.logger.LogDebug("Ping thread skipping wait");
                     continue;
                 }
 
@@ -1988,7 +1942,7 @@
                 this.PingThreadHandleNickChange();
             }
             
-            this.logger.Debug("Ping thread exited!");
+            this.logger.LogDebug("Ping thread exited!");
         }
 
         private void PingThreadHandlePing()
@@ -2001,7 +1955,7 @@
 
             if (!result)
             {
-                this.logger.Warn("Ping reply not received!");
+                this.logger.LogWarning("Ping reply not received!");
                 this.lagTimer++;
                 PingsMissed.WithLabels(this.ClientName).Inc();
 
