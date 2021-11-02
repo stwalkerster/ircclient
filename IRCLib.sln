@@ -3,6 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{59D5FBFC-4C79-43B7-AA86-7A2642B097AA}"
 	ProjectSection(SolutionItems) = preProject
 		.teamcity/Irc_StwalkersterIrcClient/buildTypes/Irc_StwalkersterIrcClient_StwalkersterIrcClient.xml = .teamcity/Irc_StwalkersterIrcClient/buildTypes/Irc_StwalkersterIrcClient_StwalkersterIrcClient.xml
+		README.md = README.md
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Stwalkerster.IrcClient", "Stwalkerster.IrcClient\Stwalkerster.IrcClient.csproj", "{7F758616-ADF4-4411-BEBE-932801D3A9D8}"
