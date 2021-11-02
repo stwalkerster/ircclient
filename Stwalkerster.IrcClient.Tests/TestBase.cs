@@ -34,16 +34,7 @@
         public void CommonSetup()
         {
             this.Logger = new Mock<ILogger<IrcClient>>();
-            // ReSharper disable TemplateIsNotCompileTimeConstantProblem
-            this.Logger.Setup(x => x.LogError(It.IsAny<string>())).Callback<string>((s) => Assert.Fail("Logger recorded error - " + s));
-            this.Logger.Setup(x => x.LogError(It.IsAny<Exception>(), It.IsAny<string>())).Callback(() => Assert.Fail("Logger recorded error."));
-            this.Logger.Setup(x => x.LogError(It.IsAny<Exception>(), It.IsAny<string>(), It.IsAny<IEnumerable<object>>())).Callback(() => Assert.Fail("Logger recorded error."));
-            this.Logger.Setup(x => x.LogError(It.IsAny<string>(), It.IsAny<IEnumerable<object>>())).Callback(() => Assert.Fail("Logger recorded error.")); 
-            
-            // ReSharper restore TemplateIsNotCompileTimeConstantProblem
-
             this.IrcConfiguration = new Mock<IIrcConfiguration>();
-            
             this.SupportHelper = new Mock<ISupportHelper>();
 
             this.LocalSetup();
