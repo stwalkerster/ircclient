@@ -1786,7 +1786,7 @@
                         return true;
                     }
 
-                    this.logger.LogInformation("Requesting capabilities: {Capabilities}", string.Join(", ", caps));
+                    this.logger.LogDebug("Requesting capabilities: {Capabilities}", string.Join(", ", caps));
 
                     this.Send(new Message("CAP", new[] {"REQ", string.Join(" ", caps)}));
 
