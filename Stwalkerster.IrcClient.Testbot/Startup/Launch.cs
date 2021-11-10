@@ -11,7 +11,7 @@
     {
         public static void Main()
         {
-            var server = new MetricServer(9101);
+            var server = new MetricServer(9102);
             server.Start();
             
             var container = new WindsorContainer();
@@ -19,7 +19,7 @@
             var libera = new IrcConfiguration(
                 hostname: "irc.libera.chat",
                 port: 6697,
-                authToServices: true,
+                authToServices: false,
                 nickname: "stwtestbot",
                 username: "stwtestbot",
                 realName: "stwtestbot",
@@ -54,7 +54,7 @@
                     
                     var message = new Message(
                         "PRIVMSG",
-                        new[] {"##stwalkerster-development", args.User.ToString() + " -> " + args.Client.Nickname});
+                        new[] {"##stwalkerster-development", args.User.ToString() + " -> " + args.Client.Latency + "s lag, " + args.Client.PrivmsgReceived +" messages"});
                     args.Client.Send(message);
                 }
                 else

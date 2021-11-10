@@ -407,6 +407,9 @@
         public bool CapCapNotify => this.capCapNotify;
         public bool CapAwayNotify => this.capAwayNotify;
 
+        public int PrivmsgReceived => (int)PrivateMessagesReceived.WithLabels(this.ClientName).Value;
+        public double Latency => PingDuration.WithLabels(this.ClientName).Value;
+        
         #endregion
 
         #region Public Methods and Operators

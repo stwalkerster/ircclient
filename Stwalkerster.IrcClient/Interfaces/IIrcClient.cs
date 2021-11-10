@@ -94,6 +94,8 @@
         string ClientName { get; }
         string ExtBanDelimiter { get; }
         string ExtBanTypes { get; }
+        int PrivmsgReceived { get; }
+        double Latency { get; }
 
         #endregion
 

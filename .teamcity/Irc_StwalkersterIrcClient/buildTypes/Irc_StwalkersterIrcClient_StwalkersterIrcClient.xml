@@ -7,7 +7,7 @@
       <param name="primaryProjectName" value="Stwalkerster.IrcClient" />
       <param name="solutionName" value="IRCLib" />
       <param name="system.DefineConstants" value="PARSERTESTS" />
-      <param name="version" value="11.0" spec="text display='normal' description='Two or three-part version number. The build counter will be appended to the end.' validationMode='any'" />
+      <param name="version" value="11.1" spec="text display='normal' description='Two or three-part version number. The build counter will be appended to the end.' validationMode='any'" />
       <param name="versiontag" value="" spec="text description='e.g. &quot;-alpha&quot;' validationMode='any' display='normal'" />
     </parameters>
     <build-runners />
