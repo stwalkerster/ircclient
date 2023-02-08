@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
+    using System.IO;
     using System.Linq;
 
     /// <summary>
@@ -155,11 +156,23 @@
 
             result += this.Command;
 
+            var finalParameterSent = false;
             foreach (var p in this.Parameters)
             {
+                if (p.Contains('\n'))
+                {
+                    throw new InvalidDataException("Parameters cannot contain newline characters");
+                }
+
+                if (finalParameterSent)
+                {
+                    throw new IndexOutOfRangeException("A space-containing parameter has already been parsed. No further parameters are allowed.");
+                }
+                
                 if (p.Contains(" "))
                 {
                     result += " :" + p;
+                    finalParameterSent = true;
                 }
                 else
                 {

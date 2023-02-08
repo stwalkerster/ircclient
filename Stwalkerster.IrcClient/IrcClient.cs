@@ -518,12 +518,26 @@
         /// </param>
         public void Send(IMessage message)
         {
-            this.networkClient.Send(message.ToString());
+            try
+            {
+                this.networkClient.Send(message.ToString());
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogError("Could not send message to network." + ex.Message);
+            }
         }
 
         public void PrioritySend(IMessage message)
         {
-            this.networkClient.PrioritySend(message.ToString());
+            try
+            {
+                this.networkClient.PrioritySend(message.ToString());
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogError("Could not send message to network." + ex.Message);
+            }
         }
 
         /// <summary>
