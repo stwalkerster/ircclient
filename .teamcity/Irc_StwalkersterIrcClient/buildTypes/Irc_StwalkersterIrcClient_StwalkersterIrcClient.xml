@@ -14,7 +14,7 @@
     <vcs-settings>
       <vcs-entry-ref root-id="Irc_IRCclient" />
       <vcs-entry-ref root-id="EyeInTheSky_ParserTests">
-        <checkout-rule rule="+:parsertests =&gt; Stwalkerster.IrcClient.Tests/bin/Release/netcoreapp3.1/parsertests" />
+        <checkout-rule rule="+:parsertests =&gt; Stwalkerster.IrcClient.Tests/bin/Release/net6.0/parsertests" />
       </vcs-entry-ref>
     </vcs-settings>
     <requirements />
