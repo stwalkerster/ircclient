@@ -29,6 +29,15 @@
           <param name="vcsRootId" value="Irc_IRCclient" />
         </parameters>
       </extension>
+      <extension id="BUILD_EXT_30" type="pullRequests">
+        <parameters>
+          <param name="authenticationType" value="token" />
+          <param name="filterAuthorRole" value="MEMBER" />
+          <param name="providerType" value="github" />
+          <param name="secure:accessToken" value="credentialsJSON:625270b8-6b78-4876-b819-d6c144a4782e" />
+          <param name="vcsRootId" value="Irc_IRCclient" />
+        </parameters>
+      </extension>
     </build-extensions>
     <cleanup />
   </settings>
