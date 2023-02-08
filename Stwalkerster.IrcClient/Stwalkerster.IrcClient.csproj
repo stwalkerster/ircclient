@@ -10,7 +10,6 @@
         <Copyright>Copyright © Simon Walker 2023</Copyright>
         <PackageProjectUrl>https://github.com/stwalkerster/ircclient</PackageProjectUrl>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <PackageLicenseUrl>https://github.com/stwalkerster/ircclient/blob/master/LICENCE.md</PackageLicenseUrl>
         <RepositoryUrl>https://github.com/stwalkerster/ircclient</RepositoryUrl>
     </PropertyGroup>
 
