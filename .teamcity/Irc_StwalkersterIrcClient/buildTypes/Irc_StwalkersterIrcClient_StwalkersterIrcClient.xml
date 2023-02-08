@@ -10,7 +10,24 @@
       <param name="version" value="11.1" spec="text display='normal' description='Two or three-part version number. The build counter will be appended to the end.' validationMode='any'" />
       <param name="versiontag" value="" spec="text description='e.g. &quot;-alpha&quot;' validationMode='any' display='normal'" />
     </parameters>
-    <build-runners />
+    <build-runners>
+      <runner id="RUNNER_78" name="Publish" type="dotnet">
+        <conditions>
+          <does-not-equal name="env.BUILD_IS_PERSONAL" value="true" />
+          <equals name="teamcity.build.branch.is_default" value="true" />
+        </conditions>
+        <parameters>
+          <param name="command" value="nuget-push" />
+          <param name="dotNetCoverage.dotCover.home.path" value="%teamcity.tool.JetBrains.dotCover.CommandLineTools.DEFAULT%" />
+          <param name="nuget.packageSource" value="%nexus.nuget.server.dev%" />
+          <param name="paths" value="%pathPrefix%%primaryProjectName%/bin/Release/*.nupkg" />
+          <param name="plugin.docker.imageId" value="%docker.dotnet.sdk%" />
+          <param name="plugin.docker.imagePlatform" value="linux" />
+          <param name="secure:nuget.apiKey" value="credentialsJSON:a2127b08-eec8-4781-bf37-64dfdcd81279" />
+          <param name="teamcity.step.mode" value="default" />
+        </parameters>
+      </runner>
+    </build-runners>
     <vcs-settings>
       <vcs-entry-ref root-id="Irc_IRCclient" />
       <vcs-entry-ref root-id="EyeInTheSky_ParserTests">
