@@ -13,7 +13,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Castle.Core-log4net" Version="4.4.1" />
+      <PackageReference Include="Castle.Core-log4net" Version="5.1.1" />
       <PackageReference Include="Castle.LoggingFacility" Version="4.1.1" />
       <PackageReference Include="Castle.Windsor" Version="4.1.1" />
       <PackageReference Include="Microsoft.Extensions.Logging.Log4Net.AspNetCore" Version="6.1.0" />
