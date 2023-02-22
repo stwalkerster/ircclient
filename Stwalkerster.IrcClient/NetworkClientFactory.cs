@@ -14,7 +14,8 @@ namespace Stwalkerster.IrcClient
                 client = new SslNetworkClient(
                     configuration.Hostname,
                     configuration.Port,
-                    loggerFactory.CreateLogger<SslNetworkClient>());
+                    loggerFactory.CreateLogger<SslNetworkClient>(),
+                    configuration.ServicesCertificate);
             }
             else
             {

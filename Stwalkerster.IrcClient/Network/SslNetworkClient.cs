@@ -6,26 +6,14 @@
     using System.Security.Cryptography.X509Certificates;
     using Microsoft.Extensions.Logging;
 
-    /// <summary>
-    /// The SSL network client.
-    /// </summary>
     public class SslNetworkClient : NetworkClient
     {
-        /// <summary>
-        /// Initialises a new instance of the <see cref="SslNetworkClient" /> class.
-        /// </summary>
-        /// <param name="hostname">
-        /// The hostname.
-        /// </param>
-        /// <param name="port">
-        /// The port.
-        /// </param>
-        /// <param name="logger">
-        /// The logger.
-        /// </param>
-        public SslNetworkClient(string hostname, int port, ILogger<SslNetworkClient> logger)
+        private readonly string servicesCertificate;
+
+        public SslNetworkClient(string hostname, int port, ILogger<SslNetworkClient> logger, string servicesCertificate)
             : base(hostname, port, logger)
         {
+            this.servicesCertificate = servicesCertificate;
         }
 
         /// <inheritdoc />
@@ -37,7 +25,15 @@
 
             this.Logger?.LogInformation("Performing SSL Handshake...");
 
-            sslStream.AuthenticateAsClient(this.Hostname, new X509CertificateCollection(), SslProtocols.Tls12, false);
+            var clientCerts = new X509CertificateCollection();
+            
+            if (!string.IsNullOrWhiteSpace(this.servicesCertificate))
+            {
+                var cert = new X509Certificate2(this.servicesCertificate);
+                clientCerts.Add(cert);
+            }
+
+            sslStream.AuthenticateAsClient(this.Hostname, clientCerts, SslProtocols.Tls12, false);
 
             this.Reader = new StreamReader(sslStream);
             this.Writer = new StreamWriter(sslStream);

@@ -9,6 +9,7 @@
     using System.Text;
     using System.Threading;
     using Microsoft.Extensions.Logging;
+    using Network;
     using Prometheus;
     using Stwalkerster.IrcClient.Events;
     using Stwalkerster.IrcClient.Exceptions;
@@ -212,6 +213,7 @@
         
         private readonly string servicesUsername;
         private readonly string servicesPassword;
+        private string servicesCert;
         private readonly int missedPingLimit;
 
         #endregion
@@ -251,6 +253,7 @@
             this.authToServices = configuration.AuthToServices;
             this.servicesUsername = configuration.ServicesUsername;
             this.servicesPassword = configuration.ServicesPassword;
+            this.servicesCert = client is SslNetworkClient ? configuration.ServicesCertificate : null;
             
             this.restartOnHeavyLag = configuration.RestartOnHeavyLag;
             this.reclaimNickFromServices = configuration.ReclaimNickFromServices;
@@ -1785,7 +1788,13 @@
                     {
                         var mechanisms = saslCap.Substring(saslCap.IndexOf("=", StringComparison.Ordinal)+1).Split(',');
 
-                        if (!mechanisms.Contains("PLAIN"))
+                        if (!mechanisms.Contains("EXTERNAL") && !string.IsNullOrWhiteSpace(this.servicesCert))
+                        {
+                            this.logger.LogWarning("Configured to use EXTERNAL auth, but unsupported by server");
+                            this.servicesCert = null;
+                        }
+                        
+                        if (!mechanisms.Contains("PLAIN") && this.servicesCert == null)
                         {
                             // We only support PLAIN.
                             caps.Remove("sasl");
@@ -2013,16 +2022,30 @@
         {
             if (message == null)
             {
-                this.Send(new Message("AUTHENTICATE", "PLAIN"));
+                if (!string.IsNullOrWhiteSpace(this.servicesCert))
+                {
+                    this.Send(new Message("AUTHENTICATE", "EXTERNAL"));
+                }
+                else
+                {
+                    this.Send(new Message("AUTHENTICATE", "PLAIN"));
+                }
                 return;
             }
 
             var list = message.Parameters.ToList();
             if (list[0] == "+")
             {
-                var authdata = string.Format("\0{0}\0{1}", this.servicesUsername, this.servicesPassword);
-                authdata = Convert.ToBase64String(Encoding.UTF8.GetBytes(authdata));
-                this.Send(new Message("AUTHENTICATE", authdata));
+                if (!string.IsNullOrWhiteSpace(this.servicesCert))
+                {
+                    this.Send(new Message("AUTHENTICATE", "+"));
+                }
+                else
+                {
+                    var authdata = string.Format("\0{0}\0{1}", this.servicesUsername, this.servicesPassword);
+                    authdata = Convert.ToBase64String(Encoding.UTF8.GetBytes(authdata));
+                    this.Send(new Message("AUTHENTICATE", authdata));
+                }
             }
         }
 

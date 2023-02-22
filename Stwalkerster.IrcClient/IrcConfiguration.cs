@@ -17,6 +17,7 @@
             string serverPassword = null,
             string servicesUsername = null,
             string servicesPassword = null,
+            string servicesCertificate = null,
             bool restartOnHeavyLag = true,
             bool reclaimNickFromService = true,
             int pingInterval = 15,
@@ -74,22 +75,24 @@
 
             this.ServicesUsername = servicesUsername;
             this.ServicesPassword = servicesPassword;
+            this.ServicesCertificate = servicesCertificate;
         }
 
-        public bool AuthToServices { get; private set; }
-        public string Hostname { get; private set; }
-        public string Nickname { get; private set; }
-        public int Port { get; private set; }
-        public string RealName { get; private set; }
-        public string Username { get; private set; }
-        public string ServerPassword { get; private set; }
+        public bool AuthToServices { get; }
+        public string Hostname { get; }
+        public string Nickname { get; }
+        public int Port { get; }
+        public string RealName { get; }
+        public string Username { get; }
+        public string ServerPassword { get; }
 
-        public string ServicesUsername { get; private set; }
-        public string ServicesPassword { get; private set; }
-        public bool Ssl { get; private set; }
-        public string ClientName { get; private set; }
-        public bool RestartOnHeavyLag { get; private set; }
-        public bool ReclaimNickFromServices { get; private set; }
+        public string ServicesUsername { get; }
+        public string ServicesPassword { get; }
+        public string ServicesCertificate { get; }
+        public bool Ssl { get; }
+        public string ClientName { get; }
+        public bool RestartOnHeavyLag { get; }
+        public bool ReclaimNickFromServices { get; }
         public int PingInterval { get; }
         public int MissedPingLimit { get; }
     }

@@ -62,6 +62,7 @@
         
         string ServicesUsername { get; }
         string ServicesPassword { get; }
+        string ServicesCertificate { get; }
         
         int PingInterval { get; }
         int MissedPingLimit { get; }
