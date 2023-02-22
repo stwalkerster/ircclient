@@ -27,6 +27,8 @@ var configuration = new IrcConfiguration(
                 realName: "stwtestbot",
                 servicesUsername: "testbot",
                 servicesPassword: "sup3rs3cr3t",
+                // OR USE
+                servicesCertificate: "/path/to/passwordless/store.pfx",
                 ssl: true,
                 clientName: "TestClient",
                 restartOnHeavyLag: false
@@ -55,3 +57,6 @@ client.ReceivedMessage += (sender, args) =>
 
 client.Mode("##stwalkerster-development", "+t");
 ```
+
+### Various notes:
+* If you use servicesCertificate, the client will attempt to do a SASL EXTERNAL authentication. You must enable SSL if you want to use this, as it does mTLS negotiation.
