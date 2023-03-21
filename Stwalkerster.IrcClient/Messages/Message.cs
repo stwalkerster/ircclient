@@ -131,8 +131,8 @@
                 if (parameters.Contains(" :"))
                 {
                     // everything after this is a parameter. The +2 magic value == length of separator to exclude it
-                    lastParam = parameters.Substring(parameters.IndexOf(" :", StringComparison.InvariantCulture) + 2);
-                    parameters = parameters.Substring(0, parameters.IndexOf(" :", StringComparison.InvariantCulture));
+                    lastParam = parameters.Substring(parameters.IndexOf(" :", StringComparison.Ordinal) + 2);
+                    parameters = parameters.Substring(0, parameters.IndexOf(" :", StringComparison.Ordinal));
                 }
                 
                 messageParameters = parameters.Split(separator, StringSplitOptions.RemoveEmptyEntries).ToList();

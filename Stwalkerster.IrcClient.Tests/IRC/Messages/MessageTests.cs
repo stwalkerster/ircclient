@@ -121,6 +121,24 @@
         }
         
         [Test]
+        public void ShouldParseCorrectly7()
+        {
+            // arrange
+            string message = "@account=CVNBots-B :CVNBot8!~CVNBot8@cvn/bot/CVNBots-B PRIVMSG #cvn-sw :\u0947 समय प\u0943ष\u094dठ स\u094dवत\u0903 स\u094dथ\u093eन\u093e\u0902तर\u093fत ह\u0941आ।\"";
+            var expected = new Message(
+                "CVNBot8!~CVNBot8@cvn/bot/CVNBots-B",
+                "PRIVMSG",
+                new List<string>
+                {
+                   "#cvn-sw",
+                   "\u0947 समय प\u0943ष\u094dठ स\u094dवत\u0903 स\u094dथ\u093eन\u093e\u0902तर\u093fत ह\u0941आ।\""
+                },
+                new Dictionary<string, string>{{"account","CVNBots-B"}});
+
+            this.DoParseTest(message, expected);
+        }
+
+        [Test]
         public void ShouldParseCorrectlyTags1()
         {
             // arrange
