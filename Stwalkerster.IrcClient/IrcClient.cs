@@ -253,7 +253,7 @@
             this.authToServices = configuration.AuthToServices;
             this.servicesUsername = configuration.ServicesUsername;
             this.servicesPassword = configuration.ServicesPassword;
-            this.servicesCert = client is SslNetworkClient ? configuration.ServicesCertificate : null;
+            this.servicesCert = client is SslNetworkClient && configuration.AuthToServices ? configuration.ServicesCertificate : null;
             
             this.restartOnHeavyLag = configuration.RestartOnHeavyLag;
             this.reclaimNickFromServices = configuration.ReclaimNickFromServices;
@@ -1072,7 +1072,8 @@
                         {
                             var cachedUser = this.userCache[user.Nickname];
 
-                            if (cachedUser.SkeletonStatus < IrcUserSkeletonStatus.PrefixOnly)
+                            if (cachedUser.SkeletonStatus < IrcUserSkeletonStatus.PrefixOnly 
+                                && user.Username != null && user.Hostname != null)
                             {
                                 cachedUser.Username = user.Username;
                                 cachedUser.Hostname = user.Hostname;
@@ -1081,8 +1082,11 @@
 
                             if (this.capAccountTag && e.Message.Tags.ContainsKey("account"))
                             {
-                                user.Account = e.Message.Tags["account"];
-                                cachedUser.SkeletonStatus = IrcUserSkeletonStatus.Account;
+                                cachedUser.Account = e.Message.Tags["account"];
+                                cachedUser.SkeletonStatus =
+                                    cachedUser.SkeletonStatus == IrcUserSkeletonStatus.PrefixOnly
+                                        ? IrcUserSkeletonStatus.Account
+                                        : cachedUser.SkeletonStatus;
                             }
 
                             user = cachedUser;
@@ -1687,6 +1691,11 @@
 
                 // block forwarding
                 this.Send(new Message("MODE", new[] {this.Nickname, "+Q"}));
+
+                // Add myself to nicktracking immediately
+                this.userCache.Add(
+                    this.Nickname,
+                    new IrcUser(this) { Nickname = this.Nickname, SkeletonStatus = IrcUserSkeletonStatus.NickOnly });
                 
                 this.connectionRegistered = true;
                 this.connectionRegistrationSemaphore.Release();
