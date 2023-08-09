@@ -1,11 +1,7 @@
 ﻿namespace Stwalkerster.IrcClient.Tests.IRC.Model
 {
-    using System.Runtime.CompilerServices;
-
-    using Moq;
-
+    using NSubstitute;
     using NUnit.Framework;
-
     using Stwalkerster.IrcClient.Interfaces;
     using Stwalkerster.IrcClient.Model;
 
@@ -20,7 +16,7 @@
         [OneTimeSetUp]
         public void FixtureSetup()
         {
-            this.client = new Mock<IIrcClient>().Object;
+            this.client = Substitute.For<IIrcClient>();
         }
         
         /// <summary>

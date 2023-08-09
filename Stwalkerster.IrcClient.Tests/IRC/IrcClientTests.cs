@@ -4,7 +4,7 @@
     using System.Collections.Generic;
     using System.Threading;
     using Microsoft.Extensions.Logging;
-    using Moq;
+    using NSubstitute;
     using NUnit.Framework;
     using Stwalkerster.IrcClient.Events;
     using Stwalkerster.IrcClient.Interfaces;
@@ -23,36 +23,36 @@
         [Test]
         public void TestJoinProcessedCorrectly()
         {
-            var network = new Mock<INetworkClient>();
-            this.IrcConfiguration.Setup(x => x.Nickname).Returns("nickname");
-            this.IrcConfiguration.Setup(x => x.Username).Returns("username");
-            this.IrcConfiguration.Setup(x => x.RealName).Returns("real name");         
-            this.IrcConfiguration.Setup(x => x.ClientName).Returns("client");
+            var network = Substitute.For<INetworkClient>();
+            var supportHelper = Substitute.For<ISupportHelper>();
+            
+            this.IrcConfiguration.Nickname.Returns("nickname");
+            this.IrcConfiguration.Username.Returns("username");
+            this.IrcConfiguration.RealName.Returns("real name");
+            this.IrcConfiguration.ClientName.Returns("client");
 
-            var client = new IrcClient(network.Object, this.Logger.Object, this.IrcConfiguration.Object, this.SupportHelper.Object);
+            var client = new IrcClient(network, this.Logger, this.IrcConfiguration, supportHelper);
 
             // init IRC
             // Setup capabilities
-            network.Raise(
-                x => x.DataReceived += null, 
-                new DataReceivedEventArgs(":testnet CAP * ACK :account-notify extended-join multi-prefix"));
-
+            network.DataReceived +=
+                Raise.EventWith(new DataReceivedEventArgs(":testnet CAP * ACK :account-notify extended-join multi-prefix"));
+            
             // Complete registration
-            network.Raise(x => x.DataReceived += null, new DataReceivedEventArgs(":testnet 001 nickname :Welcome"));
+            network.DataReceived +=
+                Raise.EventWith(new DataReceivedEventArgs(":testnet 001 nickname :Welcome"));
 
             // Join a channel
-            network.Raise(
-                x => x.DataReceived += null, 
-                new DataReceivedEventArgs(":nickname!username@hostname JOIN #channel * :real name"));
+            network.DataReceived +=
+                Raise.EventWith(new DataReceivedEventArgs(":nickname!username@hostname JOIN #channel * :real name"));
 
             // Grab the actual user out when a JOIN event is raised
             IUser actualUser = null;
             client.JoinReceivedEvent += (sender, args) => actualUser = args.User;
 
             // get ChanServ to join the channel
-            network.Raise(
-                x => x.DataReceived += null, 
-                new DataReceivedEventArgs(":ChanServ!ChanServ@services. JOIN #channel * :Channel Services"));
+            network.DataReceived +=
+                Raise.EventWith(new DataReceivedEventArgs(":ChanServ!ChanServ@services. JOIN #channel * :Channel Services"));
 
             // Double check we got it
             Assert.That(actualUser, Is.Not.Null);
@@ -68,22 +68,24 @@
         [Test]
         public void TestUserFleshedOnJoin()
         {
-            var network = new Mock<INetworkClient>();
-            this.IrcConfiguration.Setup(x => x.Nickname).Returns("nickname");
-            this.IrcConfiguration.Setup(x => x.Username).Returns("username");
-            this.IrcConfiguration.Setup(x => x.RealName).Returns("real name");
-            this.IrcConfiguration.Setup(x => x.ClientName).Returns("client");
+            var network = Substitute.For<INetworkClient>();
+            var supportHelper = Substitute.For<ISupportHelper>();
+            
+            this.IrcConfiguration.Nickname.Returns("nickname");
+            this.IrcConfiguration.Username.Returns("username");
+            this.IrcConfiguration.RealName.Returns("real name");
+            this.IrcConfiguration.ClientName.Returns("client");
 
-            var client = new IrcClient(network.Object, this.Logger.Object, this.IrcConfiguration.Object, this.SupportHelper.Object);
+            var client = new IrcClient(network, this.Logger, this.IrcConfiguration, supportHelper);
 
             // init IRC
             // Setup capabilities
-            network.Raise(
-                x => x.DataReceived += null,
-                new DataReceivedEventArgs(":testnet CAP * ACK :account-notify extended-join multi-prefix"));
+            network.DataReceived +=
+                Raise.EventWith(new DataReceivedEventArgs(":testnet CAP * ACK :account-notify extended-join multi-prefix"));
 
             // Complete registration
-            network.Raise(x => x.DataReceived += null, new DataReceivedEventArgs(":testnet 001 nickname :Welcome"));
+            network.DataReceived +=
+                Raise.EventWith(new DataReceivedEventArgs(":testnet 001 nickname :Welcome"));
 
             var data = new[]
                            {
@@ -97,7 +99,7 @@
             // Join a channel
             foreach (var s in data)
             {
-                network.Raise(x => x.DataReceived += null, new DataReceivedEventArgs(s));
+                network.DataReceived += Raise.EventWith(new DataReceivedEventArgs(s));
             }
 
             Assert.That(client.UserCache.ContainsKey("FastLizard4"));
@@ -110,7 +112,7 @@
 
             // stwalkerster joins the channel
             var join = ":stwalkerster!~stwalkers@wikimedia/stwalkerster JOIN #wikipedia-en-helpers stwalkerster :realname";
-            network.Raise(x => x.DataReceived += null, new DataReceivedEventArgs(join));
+            network.DataReceived += Raise.EventWith(new DataReceivedEventArgs(join));
 
             // ... and stwalkerster should now exist as a real user
             Assert.That(client.UserCache.ContainsKey("stwalkerster"));
@@ -121,7 +123,7 @@
 
             // Flizzy does a /nick
             var nick = ":FastLizard4!fastlizard@wikipedia/pdpc.active.FastLizard4 NICK :werelizard";
-            network.Raise(x => x.DataReceived += null, new DataReceivedEventArgs(nick));
+            network.DataReceived += Raise.EventWith(new DataReceivedEventArgs(nick));
 
             // ... and werelizard should now exist as a real user, but not Flizzy
             Assert.That(client.UserCache.ContainsKey("FastLizard4"), Is.False);
@@ -135,31 +137,29 @@
         [Test]
         public void TestDisconnectEventRaised()
         {
-            var logger = new Mock<ILogger<IrcClient>>();
-            
+            var logger = Substitute.For<ILogger<IrcClient>>();
+            var supportHelper = Substitute.For<ISupportHelper>();
+
             // arrange
-            var networkClient = new Mock<INetworkClient>();
-            this.IrcConfiguration.Setup(x => x.Nickname).Returns("nick");
-            this.IrcConfiguration.Setup(x => x.Username).Returns("username");
-            this.IrcConfiguration.Setup(x => x.RealName).Returns("real name");
-            this.IrcConfiguration.Setup(x => x.ClientName).Returns("client");
-            this.IrcConfiguration.Setup(x => x.RestartOnHeavyLag).Returns(false);
-            this.SupportHelper
-                .Setup(x => x.HandlePrefixMessageSupport(It.IsAny<string>(), It.IsAny<IDictionary<string, string>>()))
-                .Callback(
-                    (string s, IDictionary<string, string> r) =>
+            var networkClient = Substitute.For<INetworkClient>();
+            this.IrcConfiguration.Nickname.Returns("nick");
+            this.IrcConfiguration.Username.Returns("username");
+            this.IrcConfiguration.RealName.Returns("real name");
+            this.IrcConfiguration.ClientName.Returns("client");
+            this.IrcConfiguration.RestartOnHeavyLag.Returns(false);
+            supportHelper.HandlePrefixMessageSupport(
+                Arg.Any<string>(),
+                Arg.Do<IDictionary<string, string>>(
+                    r =>
                     {
                         r.Add("v", "+");
                         r.Add("o", "@");
-                    });
-            var client = new IrcClient(networkClient.Object, logger.Object, this.IrcConfiguration.Object, this.SupportHelper.Object);
+                    }));
+            var client = new IrcClient(networkClient, logger, this.IrcConfiguration, supportHelper);
 
             // shortcuts
-            Action<string> i = data => networkClient.Raise(
-                x => x.DataReceived += null,
-                networkClient.Object,
-                new DataReceivedEventArgs(data));
-            Action<string> o = data => networkClient.Verify(x => x.Send(data));
+            Action<string> i = data => networkClient.DataReceived += Raise.EventWith(new DataReceivedEventArgs(data));
+            Action<string> o = data => networkClient.Received().Send(data);
             
             o("CAP LS 302");
             i(":orwell.freenode.net CAP * LS :account-notify extended-join identify-msg multi-prefix sasl");
@@ -176,9 +176,9 @@
             bool fired = false;
             client.DisconnectedEvent += (sender, args) => { fired = true; }; 
             
-            networkClient.Raise(x => x.Disconnected += null, networkClient, new EventArgs());
+            networkClient.Disconnected += Raise.Event();
 
-            networkClient.Verify(x => x.Disconnect(), Times.Once());
+            networkClient.Received(1).Disconnect();
             Assert.True(fired);
         }
         
@@ -186,35 +186,35 @@
         [Test]
         public void TestDisconnectEventRaisedOnTimeout()
         {
-            var logger = new Mock<ILogger<IrcClient>>();
+            var logger = Substitute.For<ILogger<IrcClient>>();
+            var supportHelper = Substitute.For<ISupportHelper>();
             
             // arrange
-            var networkClient = new Mock<INetworkClient>();
-            this.IrcConfiguration.Setup(x => x.Nickname).Returns("nick");
-            this.IrcConfiguration.Setup(x => x.Username).Returns("username");
-            this.IrcConfiguration.Setup(x => x.RealName).Returns("real name");
-            this.IrcConfiguration.Setup(x => x.ClientName).Returns("client");
-            this.IrcConfiguration.Setup(x => x.RestartOnHeavyLag).Returns(true);
-            this.IrcConfiguration.Setup(x => x.MissedPingLimit).Returns(3);
-            this.SupportHelper
-                .Setup(x => x.HandlePrefixMessageSupport(It.IsAny<string>(), It.IsAny<IDictionary<string, string>>()))
-                .Callback(
-                    (string s, IDictionary<string, string> r) =>
+            var networkClient = Substitute.For<INetworkClient>();
+            this.IrcConfiguration.Nickname.Returns("nick");
+            this.IrcConfiguration.Username.Returns("username");
+            this.IrcConfiguration.RealName.Returns("real name");
+            this.IrcConfiguration.ClientName.Returns("client");
+            this.IrcConfiguration.RestartOnHeavyLag.Returns(true);
+            this.IrcConfiguration.MissedPingLimit.Returns(3);
+
+            supportHelper.HandlePrefixMessageSupport(
+                Arg.Any<string>(),
+                Arg.Do<IDictionary<string, string>>(
+                    r =>
                     {
                         r.Add("v", "+");
                         r.Add("o", "@");
-                    });
-            var client = new IrcClient(networkClient.Object, logger.Object, this.IrcConfiguration.Object, this.SupportHelper.Object);
+                    }));
+            
+            var client = new IrcClient(networkClient, logger, this.IrcConfiguration, supportHelper);
             client.PingTimeout = 1;
             client.PingInterval = 1;
             
             // shortcuts
-            Action<string> i = data => networkClient.Raise(
-                x => x.DataReceived += null,
-                networkClient.Object,
-                new DataReceivedEventArgs(data));
-            Action<string> o = data => networkClient.Verify(x => x.Send(data));
-            Action<string> op = data => networkClient.Verify(x => x.PrioritySend(It.Is<string>(s => s.StartsWith(data))));
+            Action<string> i = data => networkClient.DataReceived += Raise.EventWith(new DataReceivedEventArgs(data));
+            Action<string> o = data => networkClient.Received().Send(data);
+            Action<string> op = data => networkClient.Received().PrioritySend(Arg.Is<string>(s => s.StartsWith(data)));
             
             o("CAP LS 302");
             i(":orwell.freenode.net CAP * LS :account-notify extended-join identify-msg multi-prefix sasl");
@@ -244,7 +244,7 @@
             Thread.Sleep(2000);
             Assert.True(fired);
 
-            networkClient.Verify(x => x.Disconnect(), Times.Once());
+            networkClient.Received(1).Disconnect();
             Assert.True(fired);
         }
     }

@@ -1,9 +1,7 @@
 ﻿namespace Stwalkerster.IrcClient.Tests.IRC.Model
 {
     using System.Collections;
-
-    using Moq;
-
+    using NSubstitute;
     using NUnit.Framework;
 
     using Stwalkerster.IrcClient.Interfaces;
@@ -16,11 +14,11 @@
         {
             get
             {
-                var client = new Mock<IIrcClient>();
-                client.Setup(x => x.ExtBanDelimiter).Returns("$");
-                client.Setup(x => x.ExtBanTypes).Returns("a");
+                var client = Substitute.For<IIrcClient>();
+                client.ExtBanDelimiter.Returns("$");
+                client.ExtBanTypes.Returns("a");
                 
-                var anonUser = new IrcUser(client.Object)
+                var anonUser = new IrcUser(client)
                 {
                     Nickname = "a",
                     Username = "b",
@@ -28,7 +26,7 @@
                     SkeletonStatus = IrcUserSkeletonStatus.Full
                 };
                 
-                var accountUser = new IrcUser(client.Object)
+                var accountUser = new IrcUser(client)
                 {
                     Nickname = "a",
                     Username = "b",
@@ -81,11 +79,11 @@
         [Test]
         public void TestEmptyExtBanPrefix()
         {
-            var client = new Mock<IIrcClient>();
-            client.Setup(x => x.ExtBanDelimiter).Returns(string.Empty);
-            client.Setup(x => x.ExtBanTypes).Returns("a");
+            var client = Substitute.For<IIrcClient>();
+            client.ExtBanDelimiter.Returns(string.Empty);
+            client.ExtBanTypes.Returns("a");
 
-            var user = new IrcUser(client.Object)
+            var user = new IrcUser(client)
             {
                 Nickname = "a",
                 Username = "a",
@@ -94,7 +92,7 @@
                 SkeletonStatus = IrcUserSkeletonStatus.Full
             };
             
-            var mask = new IrcUserMask("a:foo", client.Object);
+            var mask = new IrcUserMask("a:foo", client);
 
             var result = mask.Matches(user);
             Assert.True(result);

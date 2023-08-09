@@ -4,7 +4,7 @@
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
-    using Moq;
+    using NSubstitute;
     using NUnit.Framework;
     using Stwalkerster.IrcClient.Events;
     using Stwalkerster.IrcClient.Interfaces;
@@ -22,10 +22,45 @@
         private IrcClient client;
 
         /// <summary>
-        /// The network client.
+        /// The network client mock
         /// </summary>
-        private Mock<INetworkClient> networkClient;
+        private INetworkClient networkClient;
 
+        private ISupportHelper supportHelper;
+
+        public void DoSetup(string nickName, string password = null)
+        {
+            this.networkClient = Substitute.For<INetworkClient>();
+            this.supportHelper = Substitute.For<ISupportHelper>();
+            
+            this.IrcConfiguration.Nickname.Returns(nickName);
+            this.IrcConfiguration.Username.Returns("username");
+            this.IrcConfiguration.RealName.Returns("real name");
+            this.IrcConfiguration.ClientName.Returns("client");
+            this.IrcConfiguration.RestartOnHeavyLag.Returns(false);
+            this.IrcConfiguration.ServicesPassword.Returns(password);
+            this.IrcConfiguration.ServicesUsername.Returns("username");
+            
+            if (!string.IsNullOrEmpty(password))
+            {
+                this.IrcConfiguration.AuthToServices.Returns(true);
+            }
+            else
+            {
+                this.IrcConfiguration.AuthToServices.Returns(false);
+            }
+            
+            this.supportHelper.HandlePrefixMessageSupport(
+                Arg.Any<string>(),
+                Arg.Do<IDictionary<string, string>>(
+                    r =>
+                    {
+                        r.Add("v", "+");
+                        r.Add("o", "@");
+                    }));
+            this.client = new IrcClient(this.networkClient, this.Logger, this.IrcConfiguration, this.supportHelper);
+        }
+        
         [Test]
         public void TestAccountTrackingWithExistingUsers()
         {
@@ -33,11 +68,8 @@
             this.DoSetup("stwtestbot");
 
             // shortcut functions for logs
-            Action<string> i = data => this.networkClient.Raise(
-                x => x.DataReceived += null,
-                this.networkClient.Object,
-                new DataReceivedEventArgs(data));
-            Action<string> o = data => this.networkClient.Verify(x => x.Send(data));
+            Action<string> i = data => networkClient.DataReceived += Raise.EventWith(new DataReceivedEventArgs(data));
+            Action<string> o = data => this.networkClient.Received().Send(Arg.Is(data));
 
             // Initial setup
             o("CAP LS 302");
@@ -80,6 +112,7 @@
             Assert.AreEqual(3, this.client.UserCache.Count);
             Assert.IsTrue(this.client.UserCache.ContainsKey("ChanServ"));
             Assert.AreEqual("services.", this.client.UserCache["ChanServ"].Hostname);
+            // ReSharper disable once HeuristicUnreachableCode
             Assert.AreEqual(null, this.client.UserCache["ChanServ"].Account);
             Assert.AreEqual(false, this.client.UserCache["ChanServ"].Away);
             Assert.IsTrue(this.client.UserCache.ContainsKey("stwalkerster"));
@@ -116,37 +149,6 @@
                 });
         }
 
-        public void DoSetup(string nickName, string password = null)
-        {
-            this.networkClient = new Mock<INetworkClient>();
-            this.IrcConfiguration.Setup(x => x.Nickname).Returns(nickName);
-            this.IrcConfiguration.Setup(x => x.Username).Returns("username");
-            this.IrcConfiguration.Setup(x => x.RealName).Returns("real name");
-            this.IrcConfiguration.Setup(x => x.ClientName).Returns("client");
-            this.IrcConfiguration.Setup(x => x.RestartOnHeavyLag).Returns(false);
-            this.IrcConfiguration.Setup(x => x.ServicesPassword).Returns(password);
-            this.IrcConfiguration.Setup(x => x.ServicesUsername).Returns("username");
-            
-            if (!string.IsNullOrEmpty(password))
-            {
-                this.IrcConfiguration.Setup(x => x.AuthToServices).Returns(true);
-            }
-            else
-            {
-                this.IrcConfiguration.Setup(x => x.AuthToServices).Returns(false);
-            }
-            
-            this.SupportHelper
-                .Setup(x => x.HandlePrefixMessageSupport(It.IsAny<string>(), It.IsAny<IDictionary<string, string>>()))
-                .Callback(
-                    (string s, IDictionary<string, string> r) =>
-                    {
-                        r.Add("v", "+");
-                        r.Add("o", "@");
-                    });
-            this.client = new IrcClient(this.networkClient.Object, this.Logger.Object, this.IrcConfiguration.Object, this.SupportHelper.Object);
-        }
-
         [Test]
         public void TestSelfNickTracking()
         {
@@ -154,11 +156,8 @@
             this.DoSetup("stwtestbot");
 
             // shortcut functions for logs
-            Action<string> i = data => this.networkClient.Raise(
-                x => x.DataReceived += null,
-                this.networkClient.Object,
-                new DataReceivedEventArgs(data));
-            Action<string> o = data => this.networkClient.Verify(x => x.Send(data));
+            Action<string> i = data => networkClient.DataReceived += Raise.EventWith(new DataReceivedEventArgs(data));
+            Action<string> o = data => this.networkClient.Received().Send(Arg.Is(data));
             
             o("CAP LS 302");
             i(":orwell.freenode.net CAP * LS :account-notify extended-join identify-msg multi-prefix sasl");
@@ -192,11 +191,8 @@
             this.DoSetup("stwtestbot");
 
             // shortcut functions for logs
-            Action<string> i = data => this.networkClient.Raise(
-                x => x.DataReceived += null,
-                this.networkClient.Object,
-                new DataReceivedEventArgs(data));
-            Action<string> o = data => this.networkClient.Verify(x => x.Send(data));
+            Action<string> i = data => networkClient.DataReceived += Raise.EventWith(new DataReceivedEventArgs(data));
+            Action<string> o = data => this.networkClient.Received().Send(Arg.Is(data));
             
             o("CAP LS 302");
             i(":orwell.freenode.net CAP * LS :account-notify extended-join identify-msg multi-prefix sasl");
@@ -232,6 +228,7 @@
             Assert.AreEqual(2, this.client.UserCache.Count);
             Assert.IsTrue(this.client.UserCache.ContainsKey("ChanServ"));
             Assert.AreEqual("services.", this.client.UserCache["ChanServ"].Hostname);
+            // ReSharper disable once HeuristicUnreachableCode
             Assert.AreEqual(null, this.client.UserCache["ChanServ"].Account);
             Assert.AreEqual(false, this.client.UserCache["ChanServ"].Away);
             
@@ -272,11 +269,8 @@
             this.DoSetup("stwtestbot");
 
             // shortcut functions for logs
-            Action<string> i = data => this.networkClient.Raise(
-                x => x.DataReceived += null,
-                this.networkClient.Object,
-                new DataReceivedEventArgs(data));
-            Action<string> o = data => this.networkClient.Verify(x => x.Send(data));
+            Action<string> i = data => networkClient.DataReceived += Raise.EventWith(new DataReceivedEventArgs(data));
+            Action<string> o = data => this.networkClient.Received().Send(Arg.Is(data));
             
             o("CAP LS 302");
             i(":orwell.freenode.net CAP * LS :account-notify extended-join identify-msg multi-prefix sasl chghost");
@@ -312,6 +306,7 @@
             Assert.AreEqual(2, this.client.UserCache.Count);
             Assert.IsTrue(this.client.UserCache.ContainsKey("ChanServ"));
             Assert.AreEqual("services.", this.client.UserCache["ChanServ"].Hostname);
+            // ReSharper disable once HeuristicUnreachableCode
             Assert.AreEqual(null, this.client.UserCache["ChanServ"].Account);
             Assert.AreEqual(false, this.client.UserCache["ChanServ"].Away);
             
@@ -383,11 +378,8 @@
             this.DoSetup("stwtestbot");
 
             // shortcut functions for logs
-            Action<string> i = data => this.networkClient.Raise(
-                x => x.DataReceived += null,
-                this.networkClient.Object,
-                new DataReceivedEventArgs(data));
-            Action<string> o = data => this.networkClient.Verify(x => x.Send(data));
+            Action<string> i = data => networkClient.DataReceived += Raise.EventWith(new DataReceivedEventArgs(data));
+            Action<string> o = data => this.networkClient.Received().Send(Arg.Is(data));
             
             o("CAP LS 302");
             i(":orwell.freenode.net CAP * LS * :account-notify extended-join cap-notify identify-msg multi-prefix chghost");
@@ -435,11 +427,8 @@
             this.DoSetup("stwtestbot", "stwtestbot");
 
             // shortcut functions for logs
-            Action<string> i = data => this.networkClient.Raise(
-                x => x.DataReceived += null,
-                this.networkClient.Object,
-                new DataReceivedEventArgs(data));
-            Action<string> o = data => this.networkClient.Verify(x => x.Send(data));
+            Action<string> i = data => networkClient.DataReceived += Raise.EventWith(new DataReceivedEventArgs(data));
+            Action<string> o = data => this.networkClient.Received().Send(Arg.Is(data));
             
             o("CAP LS 302");
             i(":orwell.freenode.net CAP * LS :sasl=PLAIN,EXTERNAL cap-notify");
@@ -463,11 +452,8 @@
             this.DoSetup("stwtestbot", "stwtestbot");
 
             // shortcut functions for logs
-            Action<string> i = data => this.networkClient.Raise(
-                x => x.DataReceived += null,
-                this.networkClient.Object,
-                new DataReceivedEventArgs(data));
-            Action<string> o = data => this.networkClient.Verify(x => x.Send(data));
+            Action<string> i = data => networkClient.DataReceived += Raise.EventWith(new DataReceivedEventArgs(data));
+            Action<string> o = data => this.networkClient.Received().Send(Arg.Is(data));
             
             o("CAP LS 302");
             i(":orwell.freenode.net CAP * LS :sasl=EXTERNAL cap-notify");
@@ -486,11 +472,8 @@
             this.DoSetup("stwtestbot", "stwtestbot");
 
             // shortcut functions for logs
-            Action<string> i = data => this.networkClient.Raise(
-                x => x.DataReceived += null,
-                this.networkClient.Object,
-                new DataReceivedEventArgs(data));
-            Action<string> o = data => this.networkClient.Verify(x => x.Send(data));
+            Action<string> i = data => networkClient.DataReceived += Raise.EventWith(new DataReceivedEventArgs(data));
+            Action<string> o = data => this.networkClient.Received().Send(Arg.Is(data));
             
             o("CAP LS 302");
             i(":orwell.freenode.net CAP * LS :sasl cap-notify");
@@ -521,8 +504,8 @@
             this.RunTestFile(@"parsertests/test0.log", "stwalker|test");
 
             // assert
-            this.networkClient.Verify(x => x.Send("WHO ##stwalkerster %uhnatfc,001"));
-            this.networkClient.Verify(x => x.Send("WHO ##stwalkerster-development %uhnatfc,001"));
+            this.networkClient.Received().Send(Arg.Is("WHO ##stwalkerster %uhnatfc,001"));
+            this.networkClient.Received().Send(Arg.Is("WHO ##stwalkerster-development %uhnatfc,001"));
 
             var channels = this.client.Channels;
             Assert.That(channels.Count, Is.EqualTo(2));
@@ -551,8 +534,8 @@
             this.RunTestFile(@"parsertests/test1.log", "stwalker|test");
 
             // assert
-            this.networkClient.Verify(x => x.Send("WHO ##stwalkerster %uhnatfc,001"));
-            this.networkClient.Verify(x => x.Send("WHO ##stwalkerster-development %uhnatfc,001"));
+            this.networkClient.Received().Send(Arg.Is("WHO ##stwalkerster %uhnatfc,001"));
+            this.networkClient.Received().Send(Arg.Is("WHO ##stwalkerster-development %uhnatfc,001"));
 
             var channels = this.client.Channels;
             Assert.That(channels.Count, Is.EqualTo(2));
@@ -843,7 +826,7 @@
         /// </param>
         private void RaiseEvent(string line)
         {
-            this.networkClient.Raise(x => x.DataReceived += null, new DataReceivedEventArgs(line));
+            this.networkClient.DataReceived += Raise.EventWith(new DataReceivedEventArgs(line));
         }
     }
 }
