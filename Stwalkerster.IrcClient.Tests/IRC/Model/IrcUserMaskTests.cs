@@ -26,6 +26,14 @@
                     SkeletonStatus = IrcUserSkeletonStatus.Full
                 };
                 
+                var anonUserHostname = new IrcUser(client)
+                {
+                    Nickname = "a",
+                    Username = "b",
+                    Hostname = "potato.example.com",
+                    SkeletonStatus = IrcUserSkeletonStatus.Full
+                };
+                
                 var accountUser = new IrcUser(client)
                 {
                     Nickname = "a",
@@ -65,6 +73,12 @@
                 yield return new TestCaseData("$a", anonUser).Returns(false);
                 yield return new TestCaseData("$~a", accountUser).Returns(false);
                 yield return new TestCaseData("$~a", anonUser).Returns(true);
+                
+                yield return new TestCaseData("*!*@*", anonUserHostname).Returns(true);
+                yield return new TestCaseData("*!*@*.example.com", anonUserHostname).Returns(true);
+                yield return new TestCaseData("*!*@potato.*", anonUserHostname).Returns(true);
+                yield return new TestCaseData("*!*@potato.exam.*", anonUserHostname).Returns(false);
+                
             }
         }
 
