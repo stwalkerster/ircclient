@@ -17,6 +17,21 @@
         /// </summary>
         public string Flag { get; private set; }
 
+        public static DestinationFlags FromChar(string flag)
+        {
+            switch (flag)
+            {
+                case "@":
+                    return ChannelOperators;
+                case "+":
+                    return VoicedUsers;
+                case "":
+                    return null;
+                default:
+                    return new DestinationFlags(flag);
+            }
+        }
+        
         /// <summary>
         /// Initializes a new instance of the <see cref="DestinationFlags"/> class.
         /// </summary>

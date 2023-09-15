@@ -1,8 +1,10 @@
 ﻿namespace Stwalkerster.IrcClient.Tests.IRC
 {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.Threading;
+    using Exceptions;
     using Microsoft.Extensions.Logging;
     using NSubstitute;
     using NUnit.Framework;
@@ -246,6 +248,138 @@
 
             networkClient.Received(1).Disconnect();
             Assert.True(fired);
+        }
+
+        public static IEnumerable StatusMsgTestData
+        {
+            get
+            {
+                yield return new TestCaseData(null, "PRIVMSG #channel :test message");
+                yield return new TestCaseData(DestinationFlags.VoicedUsers, "PRIVMSG +#channel :test message");
+                yield return new TestCaseData(DestinationFlags.ChannelOperators, "PRIVMSG @#channel :test message");
+                yield return new TestCaseData(DestinationFlags.FromChar("%"), "PRIVMSG %#channel :test message");
+            }
+        }
+
+
+        [Test, TestCaseSource(typeof(IrcClientTests), nameof(StatusMsgTestData))]
+        public void TestStatusMsgPrefix(DestinationFlags flag, string expectedMessage)
+        {
+            var logger = Substitute.For<ILogger<IrcClient>>();
+            var supportHelper = Substitute.For<ISupportHelper>();
+
+            // arrange
+            var networkClient = Substitute.For<INetworkClient>();
+            this.IrcConfiguration.Nickname.Returns("nick");
+            this.IrcConfiguration.Username.Returns("username");
+            this.IrcConfiguration.RealName.Returns("real name");
+            this.IrcConfiguration.ClientName.Returns("client");
+            this.IrcConfiguration.RestartOnHeavyLag.Returns(false);
+            supportHelper.HandlePrefixMessageSupport(
+                Arg.Any<string>(),
+                Arg.Do<IDictionary<string, string>>(
+                    r =>
+                    {
+                        r.Add("v", "+");
+                        r.Add("o", "@");
+                        r.Add("h", "%");
+                    }));
+            supportHelper.HandleStatusMessageSupport(
+                Arg.Any<string>(),
+                Arg.Do<IList<string>>(
+                    list =>
+                    {
+                        list.Add("+");
+                        list.Add("@");
+                        list.Add("%");
+                    }));
+            var client = new IrcClient(networkClient, logger, this.IrcConfiguration, supportHelper);
+
+            // shortcuts
+            Action<string> i = data => networkClient.DataReceived += Raise.EventWith(new DataReceivedEventArgs(data));
+            Action<string> o = data => networkClient.Received().Send(data);
+            
+            o("CAP LS 302");
+            i(":copper.libera.chat CAP * LS :account-notify extended-join multi-prefix");
+            o("CAP REQ :account-notify extended-join multi-prefix");
+            i(":copper.libera.chat CAP * ACK :account-notify extended-join multi-prefix ");
+            o("CAP END");
+            o("USER username * * :real name");
+            o("NICK nick");
+            i(":copper.libera.chat 001 stwtest :Welcome to the Libera.Chat Internet Relay Chat Network stwtest");
+            i(":copper.libera.chat 005 stwtest CHANMODES=eIbq,k,flj,CFLMPQSTcgimnprstuz CHANLIMIT=#:250 PREFIX=(ovh)@+% MAXLIST=bqeI:100 MODES=4 NETWORK=stwalkerster.net STATUSMSG=@+% CASEMAPPING=rfc1459 NICKLEN=16 MAXNICKLEN=16 CHANNELLEN=50 TOPICLEN=390 :are supported by this server");
+            i(":stwtestbot MODE nick :+Ziw");
+            o("MODE nick +Q");
+            i(":nick MODE nick :+Q");
+
+            Assert.That(client.StatusMsgDestinationFlags, Contains.Item("@"));
+            Assert.That(client.StatusMsgDestinationFlags, Contains.Item("+"));
+            Assert.That(client.StatusMsgDestinationFlags, Contains.Item("%"));
+            
+            networkClient.ClearReceivedCalls();
+            
+            client.SendMessage("#channel", "test message", flag);
+            o(expectedMessage);
+        }
+        
+        [Test]
+        public void TestBadStatusMsgPrefix()
+        {
+            var logger = Substitute.For<ILogger<IrcClient>>();
+            var supportHelper = Substitute.For<ISupportHelper>();
+
+            // arrange
+            var networkClient = Substitute.For<INetworkClient>();
+            this.IrcConfiguration.Nickname.Returns("nick");
+            this.IrcConfiguration.Username.Returns("username");
+            this.IrcConfiguration.RealName.Returns("real name");
+            this.IrcConfiguration.ClientName.Returns("client");
+            this.IrcConfiguration.RestartOnHeavyLag.Returns(false);
+            supportHelper.HandlePrefixMessageSupport(
+                Arg.Any<string>(),
+                Arg.Do<IDictionary<string, string>>(
+                    r =>
+                    {
+                        r.Add("v", "+");
+                        r.Add("o", "@");
+                    }));
+            supportHelper.HandleStatusMessageSupport(
+                Arg.Any<string>(),
+                Arg.Do<IList<string>>(
+                    list =>
+                    {
+                        list.Add("+");
+                        list.Add("@");
+                    }));
+            
+            var client = new IrcClient(networkClient, logger, this.IrcConfiguration, supportHelper);
+
+            // shortcuts
+            Action<string> i = data => networkClient.DataReceived += Raise.EventWith(new DataReceivedEventArgs(data));
+            Action<string> o = data => networkClient.Received().Send(data);
+            
+            o("CAP LS 302");
+            i(":copper.libera.chat CAP * LS :account-notify extended-join multi-prefix");
+            o("CAP REQ :account-notify extended-join multi-prefix");
+            i(":copper.libera.chat CAP * ACK :account-notify extended-join multi-prefix ");
+            o("CAP END");
+            o("USER username * * :real name");
+            o("NICK nick");
+            i(":copper.libera.chat 001 stwtest :Welcome to the Libera.Chat Internet Relay Chat Network stwtest");
+            i(":copper.libera.chat 005 stwtest CHANMODES=eIbq,k,flj,CFLMPQSTcgimnprstuz CHANLIMIT=#:250 PREFIX=(ovh)@+% MAXLIST=bqeI:100 MODES=4 NETWORK=stwalkerster.net STATUSMSG=@+% CASEMAPPING=rfc1459 NICKLEN=16 MAXNICKLEN=16 CHANNELLEN=50 TOPICLEN=390 :are supported by this server");
+            i(":stwtestbot MODE nick :+Ziw");
+            o("MODE nick +Q");
+            i(":nick MODE nick :+Q");
+
+            Assert.That(client.StatusMsgDestinationFlags, Contains.Item("@"));
+            Assert.That(client.StatusMsgDestinationFlags, Contains.Item("+"));
+            
+            networkClient.ClearReceivedCalls();
+            
+            Assert.Throws<OperationNotSupportedException>(
+                () =>
+                    client.SendMessage("#channel", "test message", DestinationFlags.FromChar("%"))
+            );
         }
     }
 }

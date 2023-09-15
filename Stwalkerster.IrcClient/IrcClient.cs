@@ -412,6 +412,7 @@
 
         public int PrivmsgReceived => (int)PrivateMessagesReceived.WithLabels(this.ClientName).Value;
         public double Latency => PingDuration.WithLabels(this.ClientName).Value;
+        public IList<string> StatusMsgDestinationFlags => new List<string>(this.destinationFlags);
         
         #endregion
 
@@ -561,13 +562,23 @@
         public void SendMessage(string destination, string message, DestinationFlags destinationFlag, bool priority)
         {
             this.WaitOnRegistration();
+
+            var computedDestination = destination;
             
-            if (destinationFlag != null && !this.destinationFlags.Contains(destinationFlag.Flag))
+            if (destinationFlag != null)
             {
-                throw new OperationNotSupportedException("Message send requested with destination flag, but destination flag is not supported by this server.");
+                if (this.destinationFlags.Contains(destinationFlag.Flag))
+                {
+                    computedDestination = destinationFlag.Flag + computedDestination;
+                }
+                else
+                {
+                    throw new OperationNotSupportedException(
+                        "Message send requested with destination flag, but destination flag is not supported by this server.");
+                }
             }
 
-            var builtMessage = new Message("PRIVMSG", new[] { destination, message });
+            var builtMessage = new Message("PRIVMSG", new[] { computedDestination, message });
             if (priority)
             {
                 this.PrioritySend(builtMessage);
@@ -615,12 +626,22 @@
         /// </param>
         public void SendNotice(string destination, string message, DestinationFlags destinationFlag)
         {
-            if (destinationFlag != null && !this.destinationFlags.Contains(destinationFlag.Flag))
+            var computedDestination = destination;
+            
+            if (destinationFlag != null)
             {
-                throw new OperationNotSupportedException("Message send requested with destination flag, but destination flag is not supported by this server.");
+                if (this.destinationFlags.Contains(destinationFlag.Flag))
+                {
+                    computedDestination = destinationFlag.Flag + computedDestination;
+                }
+                else
+                {
+                    throw new OperationNotSupportedException(
+                        "Message send requested with destination flag, but destination flag is not supported by this server.");
+                }
             }
 
-            this.Send(new Message("NOTICE", new[] { destination, message }));
+            this.Send(new Message("NOTICE", new[] { computedDestination, message }));
         }
 
         public void SendNotice(string destination, string message)

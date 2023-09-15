@@ -96,6 +96,7 @@
         string ExtBanTypes { get; }
         int PrivmsgReceived { get; }
         double Latency { get; }
+        IList<string> StatusMsgDestinationFlags { get; }
 
         #endregion
 
