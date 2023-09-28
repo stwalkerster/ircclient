@@ -81,16 +81,6 @@
             {
                 LabelNames = new[] {"client"}
             });
-        
-        /// <summary>
-        /// The mode mapping.
-        /// </summary>
-        private readonly Dictionary<string, Action<IrcChannelUser, bool>> modeMapping =
-            new Dictionary<string, Action<IrcChannelUser, bool>>
-            {
-                { "v", (x, flag) => x.Voice = flag },
-                { "o", (x, flag) => x.Operator = flag },
-            };
 
         #region Fields
 
@@ -215,6 +205,7 @@
         private readonly string servicesPassword;
         private string servicesCert;
         private readonly int missedPingLimit;
+        private readonly string onConnectModes;
 
         #endregion
 
@@ -257,6 +248,8 @@
             
             this.restartOnHeavyLag = configuration.RestartOnHeavyLag;
             this.reclaimNickFromServices = configuration.ReclaimNickFromServices;
+
+            this.onConnectModes = configuration.ConnectModes;
 
             this.supportHelper = supportHelper;
             this.ClientName = configuration.ClientName;
@@ -413,6 +406,8 @@
         public int PrivmsgReceived => (int)PrivateMessagesReceived.WithLabels(this.ClientName).Value;
         public double Latency => PingDuration.WithLabels(this.ClientName).Value;
         public IList<string> StatusMsgDestinationFlags => new List<string>(this.destinationFlags);
+        
+        public string[] ChannelModeTypes { get; private set; }
         
         #endregion
 
@@ -912,8 +907,14 @@
 
                         this.logger.LogInformation("Seen {AddMode}{Mode} on {User} by {ActingUser}", addMode ? "+" : "-", c, channelUser, actingUser);
 
-                        this.modeMapping[c.ToString()](channelUser, addMode);
-                        
+                        if (addMode)
+                        {
+                            channelUser.SetPrefix(c.ToString(), this.prefixes[c.ToString()]);
+                        }
+                        else
+                        {
+                            channelUser.RemovePrefix(c.ToString());
+                        }
 
                         position++;
                     }
@@ -925,11 +926,19 @@
                     }
                 }
 
-                // ReSharper disable once StringLiteralTypo
-                if ("eIbqkflj".Contains(c))
+                // type a + b must always have a parameter
+                if (this.ChannelModeTypes[0].Contains(c) || this.ChannelModeTypes[1].Contains(c))
                 {
                     position++;
                 }
+                
+                // type c only has parameter on set.
+                if (this.ChannelModeTypes[2].Contains(c) && addMode)
+                {
+                    position++;
+                }
+                
+                // type d never has a parameter
             }
             
             this.SyncStatusFlagsMetrics();
@@ -1312,6 +1321,13 @@
             }
 
             // TODO: finish me
+            
+            // Channel mode types
+            var channelModes = e.Message.Parameters.FirstOrDefault(x => x.StartsWith("CHANMODES="));
+            if (channelModes != null)
+            {
+                this.ChannelModeTypes = channelModes.Split('=')[1].Split(',');
+            }
             
             // Max mode changes in one command
             var modeLimit = e.Message.Parameters.FirstOrDefault(x => x.StartsWith("MODES="));
@@ -1710,8 +1726,11 @@
 
                 this.pingThread.Start();
 
-                // block forwarding
-                this.Send(new Message("MODE", new[] {this.Nickname, "+Q"}));
+                // send initial connection modes
+                if (this.onConnectModes != null)
+                {
+                    this.Send(new Message("MODE", new[] { this.Nickname, this.onConnectModes }));
+                }
 
                 // Add myself to nicktracking immediately
                 this.userCache.Add(
@@ -1775,6 +1794,12 @@
                 // not logged in, cancel sasl auth.
                 this.Send(new Message("CAP", "END"));
                 this.Send1459Registration();
+                return;
+            }
+
+            if (message.Command == Numerics.VisibleHost)
+            {
+                // no-op
                 return;
             }
 

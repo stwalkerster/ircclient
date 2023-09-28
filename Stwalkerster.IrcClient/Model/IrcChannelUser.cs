@@ -1,86 +1,75 @@
 ﻿namespace Stwalkerster.IrcClient.Model
 {
+    using System.Collections.Generic;
+    using System.Linq;
+
     /// <summary>
     /// The channel user.
     /// </summary>
     public class IrcChannelUser
     {
-        /// <summary>
-        /// The channel.
-        /// </summary>
-        private readonly string channel;
-
-        /// <summary>
-        /// The user.
-        /// </summary>
-        private readonly IrcUser user;
-
-        /// <summary>
-        /// Initialises a new instance of the <see cref="IrcChannelUser" /> class.
-        /// </summary>
-        /// <param name="user">
-        /// The user.
-        /// </param>
-        /// <param name="channel">
-        /// The channel.
-        /// </param>
+        // map of mode char => prefix
+        private readonly Dictionary<string, string> prefixFlags = new Dictionary<string, string>();
+        
         public IrcChannelUser(IrcUser user, string channel)
         {
-            this.user = user;
-            this.channel = channel;
+            this.User = user;
+            this.Channel = channel;
         }
 
-        /// <summary>
-        /// Gets the user.
-        /// </summary>
-        public IrcUser User
+        public IrcUser User { get; }
+
+        public string Channel { get; }
+
+        public bool Operator
         {
-            get { return this.user; }
+            get => this.prefixFlags.ContainsKey("o");
+            set
+            {
+                if (value && ! this.prefixFlags.ContainsKey("o"))
+                {
+                    this.prefixFlags.Add("o", "@");
+                }
+            }
         }
 
-        /// <summary>
-        /// Gets the channel.
-        /// </summary>
-        public string Channel
+        public bool Voice
         {
-            get { return this.channel; }
+            get => this.prefixFlags.ContainsKey("v");
+            set
+            {
+                if (value && ! this.prefixFlags.ContainsKey("v"))
+                {
+                    this.prefixFlags.Add("v", "+");
+                }
+            }
         }
 
-        /// <summary>
-        /// Gets or sets a value indicating whether operator.
-        /// </summary>
-        public bool Operator { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether voice.
-        /// </summary>
-        public bool Voice { get; set; }
-
-        /// <summary>
-        /// The to string.
-        /// </summary>
-        /// <returns>
-        /// The <see cref="string" />.
-        /// </returns>
+        public void SetPrefix(string mode, string prefix)
+        {
+            if (!this.prefixFlags.ContainsKey(mode))
+            {
+                this.prefixFlags.Add(mode, prefix);
+            }
+        }
+        
+        public void RemovePrefix(string mode)
+        {
+            if (this.prefixFlags.ContainsKey(mode))
+            {
+                this.prefixFlags.Remove(mode);
+            }
+        }
+        
         public override string ToString()
         {
             return string.Format(
-                "[{0} {1}{2} {3}]",
+                "[{0} {1} {2}]",
                 this.Channel,
-                this.Operator ? "@" : string.Empty,
-                this.Voice ? "+" : string.Empty,
+                this.prefixFlags.Values.Aggregate("", (s, c) => s + c),
                 this.User);
         }
 
-        /// <summary>
-        /// The equals.
-        /// </summary>
-        /// <param name="obj">
-        /// The object.
-        /// </param>
-        /// <returns>
-        /// The <see cref="bool" />.
-        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj))
@@ -100,13 +89,7 @@
 
             return this.Equals((IrcChannelUser) obj);
         }
-
-        /// <summary>
-        /// The get hash code.
-        /// </summary>
-        /// <returns>
-        /// The <see cref="int" />.
-        /// </returns>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -115,16 +98,7 @@
                        ^ (this.Channel != null ? this.Channel.GetHashCode() : 0);
             }
         }
-
-        /// <summary>
-        /// The equals.
-        /// </summary>
-        /// <param name="other">
-        /// The other.
-        /// </param>
-        /// <returns>
-        /// The <see cref="bool" />.
-        /// </returns>
+        
         protected bool Equals(IrcChannelUser other)
         {
             return Equals(this.User, other.User) && string.Equals(this.Channel, other.Channel);

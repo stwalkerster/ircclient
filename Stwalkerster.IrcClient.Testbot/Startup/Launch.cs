@@ -27,7 +27,8 @@
                 servicesPassword: "stwtestbot",
                 ssl: true,
                 clientName: "TestClient",
-                restartOnHeavyLag: false
+                restartOnHeavyLag: false,
+                connectModes: null
             );
 
             

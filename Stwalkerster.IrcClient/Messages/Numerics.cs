@@ -120,5 +120,8 @@
         public const string SaslAborted = "906";
 
         #endregion
+
+        // InspIRCd stuff
+        public const string VisibleHost = "396";
     }
 }

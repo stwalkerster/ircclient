@@ -21,7 +21,8 @@
             bool restartOnHeavyLag = true,
             bool reclaimNickFromService = true,
             int pingInterval = 15,
-            int missedPingLimit = 3
+            int missedPingLimit = 3,
+            string connectModes = "+Q"
             )
         {
             if (hostname == null)
@@ -76,6 +77,8 @@
             this.ServicesUsername = servicesUsername;
             this.ServicesPassword = servicesPassword;
             this.ServicesCertificate = servicesCertificate;
+
+            this.ConnectModes = connectModes;
         }
 
         public bool AuthToServices { get; }
@@ -95,5 +98,6 @@
         public bool ReclaimNickFromServices { get; }
         public int PingInterval { get; }
         public int MissedPingLimit { get; }
+        public string ConnectModes { get; }
     }
 }

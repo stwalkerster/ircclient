@@ -66,6 +66,8 @@
         
         int PingInterval { get; }
         int MissedPingLimit { get; }
+        
+        string ConnectModes { get; }
 
 
         #endregion

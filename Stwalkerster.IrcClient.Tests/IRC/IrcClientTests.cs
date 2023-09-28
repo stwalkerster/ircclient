@@ -3,15 +3,16 @@
     using System;
     using System.Collections;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.Threading;
     using Exceptions;
     using Microsoft.Extensions.Logging;
     using NSubstitute;
     using NUnit.Framework;
-    using Stwalkerster.IrcClient.Events;
     using Stwalkerster.IrcClient.Interfaces;
     using Stwalkerster.IrcClient.Model;
     using Stwalkerster.IrcClient.Model.Interfaces;
+    using DataReceivedEventArgs = Events.DataReceivedEventArgs;
 
     /// <summary>
     /// The irc client tests.
@@ -334,6 +335,7 @@
             this.IrcConfiguration.Username.Returns("username");
             this.IrcConfiguration.RealName.Returns("real name");
             this.IrcConfiguration.ClientName.Returns("client");
+            this.IrcConfiguration.ConnectModes.Returns("+Q");
             this.IrcConfiguration.RestartOnHeavyLag.Returns(false);
             supportHelper.HandlePrefixMessageSupport(
                 Arg.Any<string>(),
@@ -380,6 +382,58 @@
                 () =>
                     client.SendMessage("#channel", "test message", DestinationFlags.FromChar("%"))
             );
+        }
+
+        [Test]
+        public void TestInspircdChannelModes()
+        {
+            var logger = Substitute.For<ILogger<IrcClient>>();
+            var supportLogger = Substitute.For<ILogger<SupportHelper>>();
+            var supportHelper = new SupportHelper(supportLogger);
+
+            // arrange
+            var networkClient = Substitute.For<INetworkClient>();
+            this.IrcConfiguration.Nickname.Returns("HMBDebug");
+            this.IrcConfiguration.Username.Returns("stwtestbot");
+            this.IrcConfiguration.RealName.Returns("stwtestbot");
+            this.IrcConfiguration.ClientName.Returns("client");
+            this.IrcConfiguration.RestartOnHeavyLag.Returns(false);
+            
+            var client = new IrcClient(networkClient, logger, this.IrcConfiguration, supportHelper);
+
+            // shortcuts
+            Action<string> i = data => networkClient.DataReceived += Raise.EventWith(new DataReceivedEventArgs(data));
+            Action<string> o = data => networkClient.Received().Send(data);
+            
+            // act
+            o("CAP LS 302");
+            i(":jasper.lizardirc.org CAP 930AAG9WU LS :away-notify extended-join account-notify multi-prefix sasl tls");
+            o("CAP REQ :away-notify extended-join account-notify multi-prefix");
+            i(":jasper.lizardirc.org CAP 930AAG9WU ACK :away-notify extended-join account-notify multi-prefix");
+            o("CAP END");
+            o("USER stwtestbot * * stwtestbot");
+            o("NICK HMBDebug");
+            i(":jasper.lizardirc.org 001 HMBDebug :Welcome to the LizardIRC IRC Network HMBDebug!~stwtestbot@livi-07-b2-v4wan-165258-cust132.vm6.cable.virginm.net");
+            i(":jasper.lizardirc.org 005 HMBDebug AWAYLEN=200 CALLERID=g CASEMAPPING=rfc1459 CHANMODES=IXZbegw,k,FHJLVdfjl,ABCKMOPRSTcimnprstuz CHANNELLEN=64 CHANTYPES=# CHARSET=ascii ELIST=MU EXCEPTS=e EXTBAN=,ABCORSTUcjmrz FNC INVEX=I KICKLEN=255 :are supported by this server");
+            i(":jasper.lizardirc.org 005 HMBDebug MAP MAXBANS=60 MAXCHANNELS=200 MAXPARA=32 MAXTARGETS=20 MODES=20 NAMESX NETWORK=LizardIRC NICKLEN=64 OVERRIDE PREFIX=(Yqaohv)!~&@%+ REMOVE SECURELIST :are supported by this server");
+            i(":jasper.lizardirc.org 005 HMBDebug SSL=[::]:6697 STARTTLS STATUSMSG=!~&@%+ TOPICLEN=80000 USERIP VBANLIST WALLCHOPS WALLVOICES WATCH=1024 :are supported by this server");
+            i(":HMBDebug!~stwtestbot@lizardirc/user/stwalkerster/bot JOIN ##stwalkerster-development stwbot :stwtestbot");
+            i(":jasper.lizardirc.org 353 HMBDebug @ ##stwalkerster-development :@HMBDebug ");
+            i(":jasper.lizardirc.org 366 HMBDebug ##stwalkerster-development :End of /NAMES list.");
+            o("WHO ##stwalkerster-development %uhnatfc,001");
+            i(":jasper.lizardirc.org 352 HMBDebug ##stwalkerster-development ~stwtestbot lizardirc/user/stwalkerster/bot jasper.lizardirc.org HMBDebug H@ :0 stwtestbot");
+            i(":jasper.lizardirc.org 315 HMBDebug ##stwalkerster-development :End of /WHO list.");
+            o("MODE ##stwalkerster-development");
+            i(":jasper.lizardirc.org 324 HMBDebug ##stwalkerster-development +nst");
+            i(":jasper.lizardirc.org 329 HMBDebug ##stwalkerster-development 1695929082");
+            i(":stwalkerster!~stwalkerster@lizardirc/staff/stwalkerster JOIN ##stwalkerster-development stwalkerster :stwalkerster");
+            i(":ChanServ!ChanServ@services.lizardirc JOIN ##stwalkerster-development * :Channel Services");
+            i(":services.lizardirc MODE ##stwalkerster-development +o ChanServ");
+            
+            i(":ChanServ!ChanServ@services.lizardirc MODE ##stwalkerster-development +qo HMBDebug HMBDebug");
+
+            Assert.IsTrue(client.Channels["##stwalkerster-development"].Users["HMBDebug"].ToString().Contains(" @~ "));
+
         }
     }
 }
