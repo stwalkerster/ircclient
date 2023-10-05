@@ -206,6 +206,7 @@
         private string servicesCert;
         private readonly int missedPingLimit;
         private readonly string onConnectModes;
+        private bool whoxSupported;
 
         #endregion
 
@@ -752,7 +753,7 @@
             var messageParameters = message.Parameters.ToList();
             var channel = messageParameters[1];
             
-            this.logger.LogDebug(message: "End of /WHOX for {Channel}", channel);
+            this.logger.LogDebug(message: "End of WHO(X) for {Channel}", channel);
             
             var whoEvent = this.EndOfWhoEvent;
             if (whoEvent != null)
@@ -1037,8 +1038,12 @@
             {
                 // we're joining this, so rate-limit from here.
                 this.logger.LogInformation("Joining channel {Channel}", channelName);
-                this.logger.LogDebug("Requesting WHOX a information for {Channel}", channelName);
-                this.Send(new Message("WHO", new[] {channelName, "%uhnatfc,001"}));
+
+                if (this.whoxSupported)
+                {
+                    this.logger.LogDebug("Requesting WHOX a information for {Channel}", channelName);
+                    this.Send(new Message("WHO", new[] { channelName, "%uhnatfc,001" }));
+                }
 
                 this.logger.LogDebug("Requesting MODE information for {Channel}", channelName);
                 this.Send(new Message("MODE", new[] {channelName}));
@@ -1329,6 +1334,11 @@
                 this.ExtBanTypes = extBanData[1];
             }
 
+            if (e.Message.Parameters.Contains("WHOX"))
+            {
+                this.whoxSupported = true;
+            }
+            
             // TODO: finish me
             
             // Channel mode types

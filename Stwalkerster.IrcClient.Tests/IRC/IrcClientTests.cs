@@ -3,7 +3,6 @@
     using System;
     using System.Collections;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Threading;
     using Exceptions;
     using Microsoft.Extensions.Logging;
@@ -420,9 +419,6 @@
             i(":HMBDebug!~stwtestbot@lizardirc/user/stwalkerster/bot JOIN ##stwalkerster-development stwbot :stwtestbot");
             i(":jasper.lizardirc.org 353 HMBDebug @ ##stwalkerster-development :@HMBDebug ");
             i(":jasper.lizardirc.org 366 HMBDebug ##stwalkerster-development :End of /NAMES list.");
-            o("WHO ##stwalkerster-development %uhnatfc,001");
-            i(":jasper.lizardirc.org 352 HMBDebug ##stwalkerster-development ~stwtestbot lizardirc/user/stwalkerster/bot jasper.lizardirc.org HMBDebug H@ :0 stwtestbot");
-            i(":jasper.lizardirc.org 315 HMBDebug ##stwalkerster-development :End of /WHO list.");
             o("MODE ##stwalkerster-development");
             i(":jasper.lizardirc.org 324 HMBDebug ##stwalkerster-development +nst");
             i(":jasper.lizardirc.org 329 HMBDebug ##stwalkerster-development 1695929082");
@@ -480,27 +476,10 @@
             i(":jasper.lizardirc.org 366 boopbot #opers-verbose :End of /NAMES list.");
             i(":ChanServ!ChanServ@services.lizardirc MODE #opers +ao boopbot boopbot");
             i(":ChanServ!ChanServ@services.lizardirc MODE #opers-verbose +ao boopbot boopbot");
-            o("WHO #opers %uhnatfc,001");
-            i(":jasper.lizardirc.org 352 boopbot #opers ChanServ services.lizardirc services.lizardirc ChanServ H@ :0 Channel Services");
-            i(":jasper.lizardirc.org 352 boopbot #opers ~stwalkerster stwalkerster.co.uk emerald.lizardirc.org stwalkerster H*&@ :0 stwalkerster");
-            i(":jasper.lizardirc.org 352 boopbot #opers fastlizard4 fastlizard4.org diamond.lizardirc.org NetOpsBot H* :0 Network Operations Bot");
-            i(":jasper.lizardirc.org 352 boopbot #opers ~boopbot stwalkerster.co.uk jasper.lizardirc.org boopbot H*&@ :0 Boop!");
-            i(":jasper.lizardirc.org 315 boopbot #opers :End of /WHO list.");
             o("MODE #opers");
             i(":jasper.lizardirc.org 324 boopbot #opers +COPnst");
-            o("WHO #operchat %uhnatfc,001");
-            i(":jasper.lizardirc.org 352 boopbot #operchat ~stwalkerster stwalkerster.co.uk emerald.lizardirc.org stwalkerster H* :0 stwalkerster");
-            i(":jasper.lizardirc.org 352 boopbot #operchat fastlizard4 fastlizard4.org diamond.lizardirc.org NetOpsBot H*@ :0 Network Operations Bot");
-            i(":jasper.lizardirc.org 352 boopbot #operchat ~boopbot stwalkerster.co.uk jasper.lizardirc.org boopbot H* :0 Boop!");
-            i(":jasper.lizardirc.org 315 boopbot #operchat :End of /WHO list.");
             o("MODE #operchat");
             i(":jasper.lizardirc.org 324 boopbot #operchat +COPnst");
-            o("WHO #opers-verbose %uhnatfc,001");
-            i(":jasper.lizardirc.org 352 boopbot #opers-verbose ChanServ services.lizardirc services.lizardirc ChanServ H@ :0 Channel Services");
-            i(":jasper.lizardirc.org 352 boopbot #opers-verbose ~stwalkerster stwalkerster.co.uk emerald.lizardirc.org stwalkerster H*&@ :0 stwalkerster");
-            i(":jasper.lizardirc.org 352 boopbot #opers-verbose fastlizard4 fastlizard4.org diamond.lizardirc.org NetOpsBot H* :0 Network Operations Bot");
-            i(":jasper.lizardirc.org 352 boopbot #opers-verbose ~boopbot stwalkerster.co.uk jasper.lizardirc.org boopbot H*&@ :0 Boop!");
-            i(":jasper.lizardirc.org 315 boopbot #opers-verbose :End of /WHO list.");
             o("MODE #opers-verbose");
             i(":jasper.lizardirc.org 324 boopbot #opers-verbose +COPnst");
 

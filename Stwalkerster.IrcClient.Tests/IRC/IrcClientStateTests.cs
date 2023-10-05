@@ -82,7 +82,7 @@
             o("USER username * * :real name");
             o("NICK stwtestbot");
             i(":kornbluth.freenode.net 001 stwtestbot :Welcome to the freenode Internet Relay Chat Network stwtestbot");
-            i(":orwell.freenode.net 005 stwtestbot CHANMODES=eIbq,k,flj,CFLMPQSTcgimnprstuz CHANLIMIT=#:250 PREFIX=(ovh)@+% MAXLIST=bqeI:100 MODES=4 NETWORK=stwalkerster.net STATUSMSG=@+% CASEMAPPING=rfc1459 NICKLEN=16 MAXNICKLEN=16 CHANNELLEN=50 TOPICLEN=390 :are supported by this server");
+            i(":orwell.freenode.net 005 stwtestbot CHANMODES=eIbq,k,flj,CFLMPQSTcgimnprstuz CHANLIMIT=#:250 PREFIX=(ovh)@+% MAXLIST=bqeI:100 MODES=4 WHOX NETWORK=stwalkerster.net STATUSMSG=@+% CASEMAPPING=rfc1459 NICKLEN=16 MAXNICKLEN=16 CHANNELLEN=50 TOPICLEN=390 :are supported by this server");
             i(":stwtestbot MODE stwtestbot :+i");
             o("MODE stwtestbot +Q");
             i(":stwtestbot MODE stwtestbot :+Q");
@@ -205,7 +205,7 @@
             o("USER username * * :real name");
             o("NICK stwtestbot");
             i(":orwell.freenode.net 001 stwtestbot :Welcome to the freenode Internet Relay Chat Network stwtestbot");
-            i(":orwell.freenode.net 005 stwtestbot CHANMODES=eIbq,k,flj,CFLMPQSTcgimnprstuz CHANLIMIT=#:250 PREFIX=(ovh)@+% MAXLIST=bqeI:100 MODES=4 NETWORK=stwalkerster.net STATUSMSG=@+% CASEMAPPING=rfc1459 NICKLEN=16 MAXNICKLEN=16 CHANNELLEN=50 TOPICLEN=390 :are supported by this server");
+            i(":orwell.freenode.net 005 stwtestbot CHANMODES=eIbq,k,flj,CFLMPQSTcgimnprstuz WHOX CHANLIMIT=#:250 PREFIX=(ovh)@+% MAXLIST=bqeI:100 MODES=4 NETWORK=stwalkerster.net STATUSMSG=@+% CASEMAPPING=rfc1459 NICKLEN=16 MAXNICKLEN=16 CHANNELLEN=50 TOPICLEN=390 :are supported by this server");
             i(":stwtestbot MODE stwtestbot :+i");
             o("MODE stwtestbot +Q");
             i(":stwtestbot MODE stwtestbot :+Q");
@@ -284,7 +284,7 @@
             o("USER username * * :real name");
             o("NICK stwtestbot");
             i(":orwell.freenode.net 001 stwtestbot :Welcome to the freenode Internet Relay Chat Network stwtestbot");
-            i(":orwell.freenode.net 005 stwtestbot CHANMODES=eIbq,k,flj,CFLMPQSTcgimnprstuz CHANLIMIT=#:250 PREFIX=(ovh)@+% MAXLIST=bqeI:100 MODES=4 NETWORK=stwalkerster.net STATUSMSG=@+% CASEMAPPING=rfc1459 NICKLEN=16 MAXNICKLEN=16 CHANNELLEN=50 TOPICLEN=390 :are supported by this server");
+            i(":orwell.freenode.net 005 stwtestbot WHOX CHANMODES=eIbq,k,flj,CFLMPQSTcgimnprstuz CHANLIMIT=#:250 PREFIX=(ovh)@+% MAXLIST=bqeI:100 MODES=4 NETWORK=stwalkerster.net STATUSMSG=@+% CASEMAPPING=rfc1459 NICKLEN=16 MAXNICKLEN=16 CHANNELLEN=50 TOPICLEN=390 :are supported by this server");
             i(":stwtestbot MODE stwtestbot :+i");
             o("MODE stwtestbot +Q");
             i(":stwtestbot MODE stwtestbot :+Q");
