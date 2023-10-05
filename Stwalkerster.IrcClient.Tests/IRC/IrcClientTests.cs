@@ -435,5 +435,85 @@
             Assert.IsTrue(client.Channels["##stwalkerster-development"].Users["HMBDebug"].ToString().Contains(" @~ "));
 
         }
+        
+        [Test]
+        public void TestInspircdNoCapChghost()
+        {
+            var logger = Substitute.For<ILogger<IrcClient>>();
+            var supportLogger = Substitute.For<ILogger<SupportHelper>>();
+            var supportHelper = new SupportHelper(supportLogger);
+
+            // arrange
+            var networkClient = Substitute.For<INetworkClient>();
+            this.IrcConfiguration.Nickname.Returns("boopbot");
+            this.IrcConfiguration.Username.Returns("boopbot");
+            this.IrcConfiguration.RealName.Returns("stwtestbot");
+            this.IrcConfiguration.ClientName.Returns("client");
+            this.IrcConfiguration.RestartOnHeavyLag.Returns(false);
+            
+            var client = new IrcClient(networkClient, logger, this.IrcConfiguration, supportHelper);
+
+            // shortcuts
+            Action<string> i = data => networkClient.DataReceived += Raise.EventWith(new DataReceivedEventArgs(data));
+            Action<string> o = data => networkClient.Received().Send(data);
+            
+            // act
+            o("CAP LS 302");
+            i(":jasper.lizardirc.org CAP 930AAG9WU LS :away-notify extended-join account-notify multi-prefix sasl tls");
+            o("CAP REQ :away-notify extended-join account-notify multi-prefix");
+            i(":jasper.lizardirc.org CAP 930AAG9WU ACK :away-notify extended-join account-notify multi-prefix");
+            o("CAP END");
+            o("USER boopbot * * stwtestbot");
+            o("NICK boopbot");
+            i(":jasper.lizardirc.org 001 boopbot :Welcome to the LizfardIRC IRC Network boopbot!~stwtestbot@stwalkerster.co.uk");
+            i(":jasper.lizardirc.org 005 boopbot AWAYLEN=200 CALLERID=g CASEMAPPING=rfc1459 CHANMODES=IXZbegw,k,FHJLVdfjl,ABCKMOPRSTcimnprstuz CHANNELLEN=64 CHANTYPES=# CHARSET=ascii ELIST=MU EXCEPTS=e EXTBAN=,ABCORSTUcjmrz FNC INVEX=I KICKLEN=255 :are supported by this server");
+            i(":jasper.lizardirc.org 005 boopbot MAP MAXBANS=60 MAXCHANNELS=200 MAXPARA=32 MAXTARGETS=20 MODES=20 NAMESX NETWORK=LizardIRC NICKLEN=64 OVERRIDE PREFIX=(Yqaohv)!~&@%+ REMOVE SECURELIST :are supported by this server");
+            i(":jasper.lizardirc.org 005 boopbot SSL=[::]:6697 STARTTLS STATUSMSG=!~&@%+ TOPICLEN=80000 USERIP VBANLIST WALLCHOPS WALLVOICES WATCH=1024 :are supported by this server");
+            i(":boopbot!~boopbot@lizardirc/staff/stwalkerster JOIN #opers stwalkerster :Boop!");
+            i(":jasper.lizardirc.org 353 boopbot @ #opers :@ChanServ &@stwalkerster NetOpsBot boopbot");
+            i(":jasper.lizardirc.org 366 boopbot #opers :End of /NAMES list.");
+            i(":boopbot!~boopbot@lizardirc/staff/stwalkerster JOIN #operchat stwalkerster :Boop!");
+            i(":jasper.lizardirc.org 353 boopbot @ #operchat :stwalkerster @NetOpsBot boopbot");
+            i(":jasper.lizardirc.org 366 boopbot #operchat :End of /NAMES list.");
+            i(":boopbot!~boopbot@lizardirc/staff/stwalkerster JOIN #opers-verbose stwalkerster :Boop!");
+            i(":jasper.lizardirc.org 353 boopbot @ #opers-verbose :@ChanServ &@stwalkerster NetOpsBot boopbot");
+            i(":jasper.lizardirc.org 366 boopbot #opers-verbose :End of /NAMES list.");
+            i(":ChanServ!ChanServ@services.lizardirc MODE #opers +ao boopbot boopbot");
+            i(":ChanServ!ChanServ@services.lizardirc MODE #opers-verbose +ao boopbot boopbot");
+            o("WHO #opers %uhnatfc,001");
+            i(":jasper.lizardirc.org 352 boopbot #opers ChanServ services.lizardirc services.lizardirc ChanServ H@ :0 Channel Services");
+            i(":jasper.lizardirc.org 352 boopbot #opers ~stwalkerster stwalkerster.co.uk emerald.lizardirc.org stwalkerster H*&@ :0 stwalkerster");
+            i(":jasper.lizardirc.org 352 boopbot #opers fastlizard4 fastlizard4.org diamond.lizardirc.org NetOpsBot H* :0 Network Operations Bot");
+            i(":jasper.lizardirc.org 352 boopbot #opers ~boopbot stwalkerster.co.uk jasper.lizardirc.org boopbot H*&@ :0 Boop!");
+            i(":jasper.lizardirc.org 315 boopbot #opers :End of /WHO list.");
+            o("MODE #opers");
+            i(":jasper.lizardirc.org 324 boopbot #opers +COPnst");
+            o("WHO #operchat %uhnatfc,001");
+            i(":jasper.lizardirc.org 352 boopbot #operchat ~stwalkerster stwalkerster.co.uk emerald.lizardirc.org stwalkerster H* :0 stwalkerster");
+            i(":jasper.lizardirc.org 352 boopbot #operchat fastlizard4 fastlizard4.org diamond.lizardirc.org NetOpsBot H*@ :0 Network Operations Bot");
+            i(":jasper.lizardirc.org 352 boopbot #operchat ~boopbot stwalkerster.co.uk jasper.lizardirc.org boopbot H* :0 Boop!");
+            i(":jasper.lizardirc.org 315 boopbot #operchat :End of /WHO list.");
+            o("MODE #operchat");
+            i(":jasper.lizardirc.org 324 boopbot #operchat +COPnst");
+            o("WHO #opers-verbose %uhnatfc,001");
+            i(":jasper.lizardirc.org 352 boopbot #opers-verbose ChanServ services.lizardirc services.lizardirc ChanServ H@ :0 Channel Services");
+            i(":jasper.lizardirc.org 352 boopbot #opers-verbose ~stwalkerster stwalkerster.co.uk emerald.lizardirc.org stwalkerster H*&@ :0 stwalkerster");
+            i(":jasper.lizardirc.org 352 boopbot #opers-verbose fastlizard4 fastlizard4.org diamond.lizardirc.org NetOpsBot H* :0 Network Operations Bot");
+            i(":jasper.lizardirc.org 352 boopbot #opers-verbose ~boopbot stwalkerster.co.uk jasper.lizardirc.org boopbot H*&@ :0 Boop!");
+            i(":jasper.lizardirc.org 315 boopbot #opers-verbose :End of /WHO list.");
+            o("MODE #opers-verbose");
+            i(":jasper.lizardirc.org 324 boopbot #opers-verbose +COPnst");
+
+            i(":NetOpsBot!fastlizard4@lizardirc/utility-bot/NetOpsBot QUIT :Quit: Caught SIGINT/2 or SIGTERM/15");
+            i(":NetOpsBot!fastlizard4@ridley.fastlizard4.org JOIN #opers * :Network Operations Bot");
+            i(":NetOpsBot!fastlizard4@ridley.fastlizard4.org JOIN #opers-verbose * :Network Operations Bot");
+            i(":NetOpsBot!fastlizard4@ridley.fastlizard4.org ACCOUNT NetOpsBot");
+            i(":NetOpsBot!fastlizard4@ridley.fastlizard4.org QUIT :Changing host");
+            
+            // This is invalid - CAP extended-join is enabled, so this should contain two more fields.
+            // However, this is what InspIRCd2 gives us.
+            i(":NetOpsBot!fastlizard4@lizardirc/utility-bot/NetOpsBot JOIN #opers");
+        }
+
     }
 }

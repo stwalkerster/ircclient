@@ -1008,8 +1008,17 @@
                 // :stwalkerster!stwalkerst@wikimedia/stwalkerster JOIN ##stwalkerster accountname :realname
                 if (user.SkeletonStatus < IrcUserSkeletonStatus.Account)
                 {
-                    user.Account = parametersList[1];
-                    user.SkeletonStatus = IrcUserSkeletonStatus.Account;
+                    if (parametersList.Count > 1)
+                    {
+                        // this parameter is REQUIRED for CAP extended-join.
+                        // InspIRCd, however, breaks the spec when doing a fakejoin for a chghost.
+                        user.Account = parametersList[1];
+                        user.SkeletonStatus = IrcUserSkeletonStatus.Account;
+                    }
+                    else
+                    {
+                        this.logger.LogWarning("CAP extended-join is enabled, but we've had a spec-breaking JOIN");
+                    }
                 }
             }
             
