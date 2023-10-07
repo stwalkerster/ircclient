@@ -54,6 +54,8 @@
             }
         }
 
+        public bool IsServer => false;
+
         /// <summary>
         /// Gets or sets the hostname.
         /// </summary>

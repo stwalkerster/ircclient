@@ -58,5 +58,7 @@
         {
             return "[SERVER]";
         }
+        
+        public bool IsServer => true;
     }
 }

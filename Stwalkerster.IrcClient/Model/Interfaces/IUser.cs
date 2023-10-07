@@ -27,5 +27,7 @@ namespace Stwalkerster.IrcClient.Model.Interfaces
         /// Gets or sets the account.
         /// </summary>
         string Account { get; set; }
+        
+        bool IsServer { get; }
     }
 }
