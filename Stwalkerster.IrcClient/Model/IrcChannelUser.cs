@@ -66,9 +66,11 @@
             return string.Format(
                 "[{0} {1} {2}]",
                 this.Channel,
-                this.prefixFlags.Values.Aggregate("", (s, c) => s + c),
+                this.StatusPrefix,
                 this.User);
         }
+
+        public string StatusPrefix => this.prefixFlags.Values.Aggregate("", (s, c) => s + c);
 
         public override bool Equals(object obj)
         {
