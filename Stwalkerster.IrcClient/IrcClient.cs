@@ -1102,12 +1102,17 @@
             {
                 if (e.Message.Prefix == this.serverPrefix)
                 {
-                    user = new ServerUser();
+                    user = new ServerUser(e.Message.Prefix);
                 }
                 else
                 {
                     // parse it into something reasonable
                     user = IrcUser.FromPrefix(e.Message.Prefix, this);
+
+                    if (user.Nickname.Contains('.'))
+                    {
+                        user = new ServerUser(e.Message.Prefix);
+                    }
 
                     lock (this.userOperationLock)
                     {

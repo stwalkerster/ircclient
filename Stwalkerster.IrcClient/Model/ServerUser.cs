@@ -7,6 +7,15 @@
     /// </summary>
     public class ServerUser : IUser
     {
+        public ServerUser()
+        {
+        }
+
+        public ServerUser(string prefix)
+        {
+            this.Nickname = prefix;
+        }
+
         /// <summary>
         /// Gets or sets the nickname.
         /// </summary>
