@@ -181,7 +181,7 @@
             networkClient.Disconnected += Raise.Event();
 
             networkClient.Received(1).Disconnect();
-            Assert.True(fired);
+            Assert.That(fired, Is.True);
         }
         
         [Ignore("Failing due to lag disconnect firing fatal log message, which appears to be unintentionally caught")]
@@ -236,18 +236,18 @@
             Thread.Sleep(1000);
             op("PING ");
             Thread.Sleep(2000);
-            Assert.False(fired);
+            Assert.That(fired, Is.False);
             op("PING ");
-            Assert.False(fired);
+            Assert.That(fired, Is.False);
             Thread.Sleep(2000);
-            Assert.False(fired);
+            Assert.That(fired, Is.False);
             op("PING ");
-            Assert.False(fired);
+            Assert.That(fired, Is.False);
             Thread.Sleep(2000);
-            Assert.True(fired);
+            Assert.That(fired, Is.True);
 
             networkClient.Received(1).Disconnect();
-            Assert.True(fired);
+            Assert.That(fired, Is.True);
         }
 
         public static IEnumerable StatusMsgTestData
@@ -428,8 +428,7 @@
             
             i(":ChanServ!ChanServ@services.lizardirc MODE ##stwalkerster-development +qo HMBDebug HMBDebug");
 
-            Assert.IsTrue(client.Channels["##stwalkerster-development"].Users["HMBDebug"].ToString().Contains(" @~ "));
-
+            Assert.That(client.Channels["##stwalkerster-development"].Users["HMBDebug"].ToString(), Contains.Substring(" @~ "));
         }
         
         [Test]

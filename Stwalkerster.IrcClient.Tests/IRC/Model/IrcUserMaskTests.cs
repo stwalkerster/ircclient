@@ -3,7 +3,6 @@
     using System.Collections;
     using NSubstitute;
     using NUnit.Framework;
-
     using Stwalkerster.IrcClient.Interfaces;
     using Stwalkerster.IrcClient.Model;
 
@@ -86,7 +85,7 @@
         public bool? MatchTests(string mask, IrcUser user)
         {
             var ircUserMask = new IrcUserMask(mask, user.Client);
-            Assert.AreEqual(mask, ircUserMask.ToString());
+            Assert.That(ircUserMask.ToString(), Is.EqualTo(mask));
             return ircUserMask.Matches(user);
         }
 
@@ -109,7 +108,7 @@
             var mask = new IrcUserMask("a:foo", client);
 
             var result = mask.Matches(user);
-            Assert.True(result);
+            Assert.That(result, Is.True);
         }
     }
 }
