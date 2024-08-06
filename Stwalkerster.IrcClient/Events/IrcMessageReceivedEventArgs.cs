@@ -54,6 +54,8 @@
                 return this.message;
             }
         }
+        
+        public byte[] RawData { get; set; }
 
         #endregion
     }

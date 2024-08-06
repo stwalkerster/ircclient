@@ -804,7 +804,7 @@
 
             if (this.connectionRegistered)
             {
-                this.RaiseDataEvent(message);
+                this.RaiseDataEvent(message, Encoding.UTF8.GetBytes(dataReceivedEventArgs.Data));
             }
             else
             {
@@ -1154,7 +1154,8 @@
                         e.Message.Parameters.First(),
                         e.Message.Parameters.Skip(1).First(),
                         e.Message.Command == "NOTICE",
-                        e.Client
+                        e.Client,
+                        e.RawData
                     );
                     
                     PrivateMessagesReceived.WithLabels(this.ClientName).Inc();
@@ -1691,19 +1692,13 @@
                 onQuitReceivedEvent(this, new QuitEventArgs(e.Message, user, this));
             }
         }
-
-        /// <summary>
-        /// The raise data event.
-        /// </summary>
-        /// <param name="message">
-        /// The message.
-        /// </param>
-        private void RaiseDataEvent(IMessage message)
+        
+        private void RaiseDataEvent(IMessage message, byte[] rawData)
         {
             var receivedMessageEvent = this.ReceivedIrcMessage;
             if (receivedMessageEvent != null)
             {
-                receivedMessageEvent(this, new IrcMessageReceivedEventArgs(message, this));
+                receivedMessageEvent(this, new IrcMessageReceivedEventArgs(message, this) { RawData = rawData });
             }
         }
 
@@ -1764,7 +1759,7 @@
                 this.connectionRegistered = true;
                 this.connectionRegistrationSemaphore.Release();
 
-                this.RaiseDataEvent(message);
+                this.RaiseDataEvent(message, Array.Empty<byte>());
                 return;
             }
 
