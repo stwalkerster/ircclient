@@ -65,7 +65,7 @@
         public const string ForwardingToOtherChannel = "470";
 
         /// <summary>
-        /// The channel full.
+        /// Cannot join channel (+l) - channel is full, try again later
         /// </summary>
         public const string ChannelFull = "471";
 
@@ -80,12 +80,18 @@
         public const string BannedFromChannel = "474";
 
         /// <summary>
-        /// The bad channel key.
+        /// Cannot join channel (+k) - bad key
         /// </summary>
         public const string BadChannelKey = "475";
 
         /// <summary>
-        /// The channel throttle exceeded.
+        /// Cannot join channel (+r) - you need to be logged into your NickServ account 
+        /// </summary>
+        // ReSharper disable once IdentifierTypo
+        public const string NeedReggedNick = "477";
+
+        /// <summary>
+        /// Cannot join channel (+j) - throttle exceeded, try again later
         /// </summary>
         public const string ChannelThrottleExceeded = "480";
 
