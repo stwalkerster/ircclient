@@ -1615,9 +1615,14 @@
             // :n!u@h KICK #chan nick :reason
             var parameters = e.Message.Parameters.ToList();
             var channel = parameters[0];
+            var reason = (string) null;
+            if (parameters.Count == 3)
+            {
+                reason = parameters[2];
+            }
             if (parameters[1] == this.Nickname)
             {
-                this.logger.LogWarning("Kicked from channel {Channel}", channel);
+                this.logger.LogWarning("Kicked from channel {Channel} by {Nickname}: {Reason}", channel, user.Nickname, reason);
 
                 lock (this.userOperationLock)
                 {
@@ -1639,7 +1644,7 @@
                     this.SyncStatusFlagsMetrics();
                 }
 
-                this.OnBotKickedEvent(new KickedEventArgs(channel));
+                this.OnBotKickedEvent(new KickedEventArgs(channel, user, reason));
             }
             else
             {
@@ -1664,7 +1669,7 @@
                 var onKickReceivedEvent = this.KickReceivedEvent;
                 if (onKickReceivedEvent != null)
                 {
-                    onKickReceivedEvent(this, new KickEventArgs(e.Message, user, channel, cachedUser, this));
+                    onKickReceivedEvent(this, new KickEventArgs(e.Message, user, channel, cachedUser, this, reason));
                 }
             }
         }

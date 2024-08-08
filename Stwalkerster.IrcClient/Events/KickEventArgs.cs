@@ -8,12 +8,20 @@
     {
         public string Channel { get; }
         public IUser KickedUser { get; }
+        public string Reason { get; }
 
-        public KickEventArgs(IMessage message, IUser user, string channel, IUser kickedUser, IIrcClient client)
+        public KickEventArgs(
+            IMessage message,
+            IUser user,
+            string channel,
+            IUser kickedUser,
+            IIrcClient client,
+            string reason)
             : base(message, user, client)
         {
             this.Channel = channel;
             this.KickedUser = kickedUser;
+            this.Reason = reason;
         }
     }
 }
