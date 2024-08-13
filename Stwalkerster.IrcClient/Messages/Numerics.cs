@@ -89,7 +89,12 @@
         /// </summary>
         // ReSharper disable once IdentifierTypo
         public const string NeedReggedNick = "477";
-
+        
+        /// <summary>
+        /// Illegal channel name
+        /// </summary>
+        public const string BadChanName = "479";
+        
         /// <summary>
         /// Cannot join channel (+j) - throttle exceeded, try again later
         /// </summary>
