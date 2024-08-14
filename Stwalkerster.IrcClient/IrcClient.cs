@@ -1113,7 +1113,14 @@
                     {
                         user = new ServerUser(e.Message.Prefix);
                     }
-
+                    else
+                    {
+                        if (this.capAccountTag && e.Message.Tags.TryGetValue("account", out var accountTag))
+                        {
+                            user.Account = accountTag;
+                        }
+                    }
+                    
                     lock (this.userOperationLock)
                     {
                         // attempt to load from cache
