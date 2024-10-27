@@ -409,6 +409,8 @@
         public IList<string> StatusMsgDestinationFlags => new List<string>(this.destinationFlags);
         
         public string[] ChannelModeTypes { get; private set; }
+
+        public INetworkClient NetworkClient => this.networkClient;
         
         #endregion
 
