@@ -111,6 +111,11 @@
 
         protected ILogger<NetworkClient> Logger { get; private set; }
 
+        /// <summary>
+        /// Milliseconds to wait between messages
+        /// </summary>
+        public int FloodDelay { get; set; } = 500;
+
         /// <inheritdoc />
         public void Disconnect()
         {
@@ -330,7 +335,7 @@
                         this.Writer.Flush();
 
                         // Flood protection
-                        Thread.Sleep(500);
+                        Thread.Sleep(this.FloodDelay);
                     }
                 }
 
