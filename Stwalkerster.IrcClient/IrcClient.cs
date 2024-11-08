@@ -1731,9 +1731,6 @@
                 {
                     // we don't support capabilities, so don't go through the CAP cycle.
                     this.logger.LogInformation("I support no capabilities");
-
-                    this.Send(new Message("CAP", "END"));
-                    this.Send1459Registration();
                 }
                 else
                 {
@@ -1741,7 +1738,8 @@
                     this.Send(new Message("CAP", new[] {"LS", "302"}));
                     this.serverCapabilities.Clear();
                 }
-
+                
+                this.Send1459Registration();
                 return;
             }
 
@@ -1807,7 +1805,6 @@
 
                 // logged in, continue with registration
                 this.Send(new Message("CAP", "END"));
-                this.Send1459Registration();
                 return;
             }
 
@@ -1826,7 +1823,6 @@
 
                 // not logged in, cancel sasl auth.
                 this.Send(new Message("CAP", "END"));
-                this.Send1459Registration();
                 return;
             }
 
@@ -1895,7 +1891,6 @@
                         this.logger.LogInformation("Requesting no capabilities");
 
                         this.Send(new Message("CAP", "END"));
-                        this.Send1459Registration();
 
                         return true;
                     }
@@ -1959,10 +1954,6 @@
                     else
                     {
                         this.Send(new Message("CAP", "END"));
-                        if (!this.connectionRegistered)
-                        {
-                            this.Send1459Registration();
-                        }
                     }
 
                     return true;
@@ -1975,7 +1966,6 @@
                     this.logger.LogWarning("NOT Acked capabilities: {Capabilities}", string.Join(", ", caps));
 
                     this.Send(new Message("CAP", "END"));
-                    this.Send1459Registration();
                     return true;
                 }
 
