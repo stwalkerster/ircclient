@@ -29,7 +29,7 @@
 
         private ISupportHelper supportHelper;
 
-        public void DoSetup(string nickName, string password = null)
+        public void DoSetup(string nickName, string password = null, string saslUsername = "username")
         {
             this.networkClient = Substitute.For<INetworkClient>();
             this.supportHelper = Substitute.For<ISupportHelper>();
@@ -40,7 +40,7 @@
             this.IrcConfiguration.ClientName.Returns("client");
             this.IrcConfiguration.RestartOnHeavyLag.Returns(false);
             this.IrcConfiguration.ServicesPassword.Returns(password);
-            this.IrcConfiguration.ServicesUsername.Returns("username");
+            this.IrcConfiguration.ServicesUsername.Returns(saslUsername);
 
             this.IrcConfiguration.ConnectModes.Returns("+Q");
             
@@ -449,6 +449,53 @@
             o("USER username * * :real name");
             o("NICK stwtestbot");
             i(":orwell.freenode.net 001 stwtestbot :Welcome to the freenode Internet Relay Chat Network stwtestbot");
+        }
+        
+        [Test]
+        public void TestSasl302LongNegotiation()
+        {
+            // initial client setup
+            this.DoSetup("stwtestbot", 
+                "passwordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpassword",
+                "usernameusername");
+
+            // shortcut functions for logs
+            Action<string> i = data => networkClient.DataReceived += Raise.EventWith(new DataReceivedEventArgs(data));
+            Action<string> o = data => this.networkClient.Received().Send(Arg.Is(data));
+            
+            o("CAP LS 302");
+            i(":orwell.freenode.net CAP * LS :sasl=PLAIN,EXTERNAL cap-notify");
+            o("CAP REQ :sasl cap-notify");
+            i(":orwell.freenode.net CAP * ACK :sasl cap-notify");
+            o("AUTHENTICATE PLAIN");
+            i("AUTHENTICATE +");
+            o("AUTHENTICATE AHVzZXJuYW1ldXNlcm5hbWUAcGFzc3dvcmRwYXNzd29yZHBhc3N3b3JkcGFzc3dvcmRwYXNzd29yZHBhc3N3b3JkcGFzc3dvcmRwYXNzd29yZHBhc3N3b3JkcGFzc3dvcmRwYXNzd29yZHBhc3N3b3JkcGFzc3dvcmRwYXNzd29yZHBhc3N3b3JkcGFzc3dvcmRwYXNzd29yZHBhc3N3b3JkcGFzc3dvcmRwYXNzd29yZHBhc3N3b3JkcGFzc3dvcmRwYXNzd29yZHBhc3N3b3JkcGFzc3dvcmRwYXNzd29yZHBhc3N3b3JkcGFzc3dvcmRwYXNzd29yZHBhc3N3b3JkcGFzc3dvcmRwYXNzd29yZHBhc3N3b3JkcGFzc3dvcmRwYXNzd29yZHBh");
+            o("AUTHENTICATE c3N3b3Jk");
+            i(":orwell.freenode.net 900 * *!unknown@example.net usernameusername :You are now logged in as usernameusername");
+            i(":orwell.freenode.net 903 * :SASL authentication successful");
+        }
+        
+        [Test]
+        public void TestSasl302LengthBoundaryNegotiation()
+        {
+            // initial client setup
+            this.DoSetup("stwtestbot", 
+                "passwordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpassword");
+
+            // shortcut functions for logs
+            Action<string> i = data => networkClient.DataReceived += Raise.EventWith(new DataReceivedEventArgs(data));
+            Action<string> o = data => this.networkClient.Received().Send(Arg.Is(data));
+            
+            o("CAP LS 302");
+            i(":orwell.freenode.net CAP * LS :sasl=PLAIN,EXTERNAL cap-notify");
+            o("CAP REQ :sasl cap-notify");
+            i(":orwell.freenode.net CAP * ACK :sasl cap-notify");
+            o("AUTHENTICATE PLAIN");
+            i("AUTHENTICATE +");
+            o("AUTHENTICATE AHVzZXJuYW1lAHBhc3N3b3JkcGFzc3dvcmRwYXNzd29yZHBhc3N3b3JkcGFzc3dvcmRwYXNzd29yZHBhc3N3b3JkcGFzc3dvcmRwYXNzd29yZHBhc3N3b3JkcGFzc3dvcmRwYXNzd29yZHBhc3N3b3JkcGFzc3dvcmRwYXNzd29yZHBhc3N3b3JkcGFzc3dvcmRwYXNzd29yZHBhc3N3b3JkcGFzc3dvcmRwYXNzd29yZHBhc3N3b3JkcGFzc3dvcmRwYXNzd29yZHBhc3N3b3JkcGFzc3dvcmRwYXNzd29yZHBhc3N3b3JkcGFzc3dvcmRwYXNzd29yZHBhc3N3b3JkcGFzc3dvcmRwYXNzd29yZHBhc3N3b3JkcGFzc3dvcmRwYXNzd29yZA==");
+            o("AUTHENTICATE +");
+            i(":orwell.freenode.net 900 * *!unknown@example.net username :You are now logged in as username");
+            i(":orwell.freenode.net 903 * :SASL authentication successful");
         }
 
         [Test]

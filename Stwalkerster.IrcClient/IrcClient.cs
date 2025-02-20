@@ -2122,7 +2122,25 @@
                 {
                     var authdata = string.Format("\0{0}\0{1}", this.servicesUsername, this.servicesPassword);
                     authdata = Convert.ToBase64String(Encoding.UTF8.GetBytes(authdata));
-                    this.Send(new Message("AUTHENTICATE", authdata));
+
+                    while (true)
+                    {
+                        if (authdata.Length == 0)
+                        {
+                            this.Send(new Message("AUTHENTICATE", "+"));
+                            break;   
+                        }
+                        if (authdata.Length < 400)
+                        {
+                            this.Send(new Message("AUTHENTICATE", authdata));
+                            break;
+                        }
+
+                        var localAuthdata = authdata.Substring(0, 400);
+                        this.Send(new Message("AUTHENTICATE", localAuthdata));
+                        authdata = authdata.Substring(400);
+                    }
+
                 }
             }
         }
