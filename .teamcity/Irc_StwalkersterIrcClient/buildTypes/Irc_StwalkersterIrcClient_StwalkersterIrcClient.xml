@@ -4,7 +4,6 @@
   <description />
   <settings ref="DotNetCoreLibrary">
     <parameters>
-      <param name="docker.dotnet.sdk" value="mcr.microsoft.com/dotnet/sdk:8.0-alpine" />
       <param name="primaryProjectName" value="Stwalkerster.IrcClient" />
       <param name="solutionName" value="IRCLib" />
       <param name="system.DefineConstants" value="PARSERTESTS" />
