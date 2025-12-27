@@ -7,13 +7,15 @@
     /// </summary>
     public class ServerUser : IUser
     {
+        private string serverName;
+        
         public ServerUser()
         {
         }
 
         public ServerUser(string prefix)
         {
-            this.Nickname = prefix;
+            this.serverName = prefix;
         }
 
         /// <summary>
@@ -22,7 +24,7 @@
         public string
             Nickname
         {
-            get { return string.Empty; }
+            get { return this.serverName; }
 
             set { }
         }
@@ -65,7 +67,7 @@
         /// </returns>
         public override string ToString()
         {
-            return "[SERVER]";
+            return "[SERVER " + this.serverName + "]";
         }
         
         public bool IsServer => true;
